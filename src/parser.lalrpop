@@ -1,0 +1,210 @@
+use std::str::FromStr;
+use ast::*;
+
+grammar;
+
+pub TranslationUnit: TranslationUnit = {
+    Statement* => TranslationUnit { stmts: <> }
+};
+
+Spanned<T>: Spanned<T> = {
+    <l:@L> <t:T> <r:@R> => Spanned::new(
+        t,
+        Span(l, r)
+    )
+};
+
+Statement: Spanned<Statement> = {
+    Spanned<FuncDecl>,
+    Spanned<CompoundStmt>,
+    Spanned<LetStmt>,
+    Spanned<LoopStmt>,
+    Spanned<WhileStmt>,
+    Spanned<IfStmt>,
+    Spanned<ReturnStmt>,
+    Spanned<ExprStmt>,
+    Spanned<PrintStmt>,
+};
+
+FuncDecl: Statement = {
+    "fn" <id:Identifier> "(" <params:Comma<ParamDecl>> ")" <ty:("->" <Type>)?> <stmt:Spanned<CompoundStmt>>
+    => Statement::FuncDecl {
+        name: id,
+        params: params,
+        return_ty: ty.unwrap_or(ParseType::Unit),
+        stmt: Box::new(stmt),
+    }
+};
+
+ParamDecl: (String, ParseType) = {
+    <Identifier> ":" <Type> => (<>)
+};
+
+CompoundStmt: Statement = {
+    "{" <Statement*> "}" => Statement::Compound { stmts: <> }
+};
+
+LetStmt: Statement = {
+    "let" <id:Identifier> <ty:(":" <Type>)?> "=" <expr:Expr> ";" => Statement::Let {
+        name: id,
+        ty: ty,
+        expr: expr,
+    }
+};
+
+LoopStmt: Statement = {
+    "loop" <Spanned<CompoundStmt>> => Statement::Loop { stmt: Box::new(<>) }
+};
+
+WhileStmt: Statement = {
+    "while" <expr:Expr> <stmt:Spanned<CompoundStmt>> => Statement::While {
+        cond: expr,
+        stmt: Box::new(stmt)
+    }
+};
+
+IfStmt: Statement = {
+    "if" <if_cond:Expr> <if_stmt:Spanned<CompoundStmt>> <elseifs:ElseIfPart*> <else_part:ElsePart?> => {
+        let mut v = vec![(if_cond, if_stmt)];
+        v.extend(elseifs);
+        Statement::If {
+            ifs_branches: v,
+            else_branch: else_part.map(Box::new),
+        }
+    }
+};
+
+ElseIfPart: (Spanned<Expr>, Spanned<Statement>) = {
+    "else" "if" <Expr> <Spanned<CompoundStmt>>
+};
+
+ElsePart: Spanned<Statement> = {
+    "else" <Spanned<CompoundStmt>>
+};
+
+ReturnStmt: Statement = {
+    "return" <Expr> ";" => Statement::Return { expr: <> }
+};
+
+ExprStmt: Statement = {
+    <Expr> ";" => Statement::Expr { expr: <> }
+};
+
+PrintStmt: Statement = {
+    "print" <Expr> ";" => Statement::Print { expr: <> }
+};
+
+Expr = AssignExpr;
+
+AssignExpr: Spanned<Expr> = {
+    <l:@L> <lhs:LogOrExpr> "=" <rhs:AssignExpr> <r:@R> => {
+        Spanned::new(
+            Expr::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    LogOrExpr
+};
+
+LogOrExpr: Spanned<Expr> = {
+    <l:@L> <lhs:LogAndExpr> "||" <rhs:LogAndExpr> <r:@R> => {
+        Spanned::new(
+            Expr::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    LogAndExpr
+};
+
+LogAndExpr: Spanned<Expr> = {
+    <l:@L> <lhs:EqExpr> "&&" <rhs:EqExpr> <r:@R> => {
+        Spanned::new(
+            Expr::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    EqExpr
+};
+
+EqExpr = Tier<EqOp, CompExpr>;
+CompExpr = Tier<CompOp, SumExpr>;
+SumExpr = Tier<SumOp, FactorExpr>;
+FactorExpr = Tier<FactorOp, SubscriptOrCallExpr>;
+
+EqOp: BinOpCode = {
+    "==" => BinOpCode::Equal,
+    "!=" => BinOpCode::NotEqual,
+};
+
+CompOp: BinOpCode = {
+    "<" => BinOpCode::Less,
+    "<=" => BinOpCode::LessEqual,
+    ">" => BinOpCode::Greater,
+    ">=" => BinOpCode::GreaterEqual,
+};
+
+SumOp: BinOpCode = {
+    "+" => BinOpCode::Add,
+    "-" => BinOpCode::Sub,
+};
+
+FactorOp: BinOpCode = {
+    "*" => BinOpCode::Times,
+    "/" => BinOpCode::Divide,
+    "%" => BinOpCode::Mod,
+};
+
+Tier<Op, NextTier>: Spanned<Expr> = {
+    <l:@L> <lhs:Tier<Op, NextTier>> <op:Op> <rhs:NextTier> <r:@R> => {
+        Spanned::new(
+            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    NextTier
+};
+
+SubscriptOrCallExpr: Spanned<Expr> = {
+    <l:@L> <lhs:Spanned<Term>> "[" <rhs:Expr> "]" <r:@R> =>
+        Spanned::new(
+            Expr::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        ),
+    <l:@L> <lhs:Spanned<Term>> "(" <rhs:Comma<Expr>> ")" <r:@R> =>
+        Spanned::new(
+            Expr::FuncCall(Box::new(lhs), rhs),
+            Span(l, r)
+        ),
+    Spanned<Term>
+};
+
+Term: Expr = {
+    Number => Expr::Number(<>),
+    Identifier => Expr::Identifier(<>),
+    "(" <Expr> ")" => Expr::Paren(Box::new(<>)),
+    <op:UnOp> <expr:Spanned<Term>> => Expr::UnOp(op, Box::new(expr)),
+};
+
+UnOp: UnOpCode = {
+    "-" => UnOpCode::Minus,
+    "!" => UnOpCode::LogicalNot,
+};
+
+Number: i32 = {
+    r"[0-9]+" => i32::from_str(<>).unwrap(),
+};
+
+Identifier: String = {
+    r"[_a-zA-Z][_a-zA-Z0-9]*" => String::from(<>),
+};
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => v.into_iter().chain(e).collect()
+};
+
+Type: ParseType = {
+    Identifier => ParseType::Lit(<>),
+    "*" <Type> => ParseType::Ptr(Box::new(<>)),
+    "[" <Type> "]" => ParseType::Array(Box::new(<>)),
+    "(" ")" => ParseType::Unit,
+};

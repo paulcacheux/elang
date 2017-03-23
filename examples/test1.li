@@ -1,0 +1,28 @@
+fn neg_square(x: int) {
+    let y = x * x;
+    return -y;
+}
+
+fn test_if(x: int) {
+    if x {
+        return -x;
+    } else if !x {
+        return x + 2;
+    } else {
+        return x;
+    }
+}
+
+fn test_loop(x: int) {
+    loop {
+        return x;
+    }
+}
+
+fn test_while(x: int) {
+    while x {
+        x = x - 1;
+    }
+}
+
+print neg_square(2 * 6);
