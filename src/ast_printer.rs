@@ -166,8 +166,6 @@ impl ASTPrinter {
                 match *lit {
                     Literal::Int(val) => println!("IntLit '{}'", val),
                     Literal::Double(val) => println!("DoubleLit '{}'", val),
-                    Literal::Char(val) => println!("CharLit '{}'", val),
-                    Literal::String(_) => println!("StringLit '..'"),
                     Literal::Bool(val) => println!("BoolLit '{:?}'", val),
                 }
             }

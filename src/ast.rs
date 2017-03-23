@@ -60,8 +60,6 @@ pub enum Expression {
 pub enum Literal {
     Int(i64),
     Double(f64),
-    Char(char),
-    String(String),
     Bool(bool),
 }
 
