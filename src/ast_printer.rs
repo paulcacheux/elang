@@ -97,6 +97,12 @@ impl ASTPrinter {
 
                 self.0 -= 1;
             },
+            Break => {
+                println!("BreakStmt");
+            },
+            Continue => {
+                println!("ContinueStmt");
+            },
             Return { ref expr } => {
                 println!("ReturnStmt");
                 self.0 += 1;

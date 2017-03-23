@@ -21,6 +21,8 @@ Statement: Spanned<Statement> = {
     Spanned<LoopStmt>,
     Spanned<WhileStmt>,
     Spanned<IfStmt>,
+    Spanned<BreakStmt>,
+    Spanned<ContinueStmt>,
     Spanned<ReturnStmt>,
     Spanned<ExprStmt>,
     Spanned<PrintStmt>,
@@ -80,6 +82,14 @@ ElseIfPart: (Spanned<Expr>, Spanned<Statement>) = {
 
 ElsePart: Spanned<Statement> = {
     "else" <Spanned<CompoundStmt>>
+};
+
+BreakStmt: Statement = {
+    "break" ";" => Statement::Break,
+};
+
+ContinueStmt: Statement = {
+    "continue" ";" => Statement::Continue,
 };
 
 ReturnStmt: Statement = {

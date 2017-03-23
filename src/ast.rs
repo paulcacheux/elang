@@ -33,6 +33,8 @@ pub enum Statement {
         ifs_branches: Vec<(Spanned<Expr>, Spanned<Statement>)>,
         else_branch: Option<Box<Spanned<Statement>>>,
     },
+    Break,
+    Continue,
     Return {
         expr: Spanned<Expr>,
     },

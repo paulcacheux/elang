@@ -32,5 +32,8 @@ fn main() {
 
     let input = read_file(matches.value_of("INPUT").unwrap()).expect("Can't read input file");
     let tu = parser::parse_TranslationUnit(&input).unwrap();
-    ast_printer::print_ast(&tu);
+
+    if matches.is_present("ast") {
+        ast_printer::print_ast(&tu);
+    }
 }
