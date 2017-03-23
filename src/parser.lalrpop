@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use lexer;
 use ast::*;
 
 grammar;
@@ -202,26 +202,6 @@ UnOp: UnOpCode = {
     "!" => UnOpCode::LogicalNot,
 };
 
-IntLiteral: i64 = {
-    r"[1-9][0-9]*" => i64::from_str(<>).unwrap(),
-    "0" => 0,
-};
-
-BoolLiteral: bool = {
-    "true" => true,
-    "false" => false,
-};
-
-DoubleLiteral: f64 = {
-    <i:IntLiteral> <frac:r"\.[0-9]*"> => {
-        f64::from_str(&(i.to_string() + frac)).unwrap()
-    }
-};
-
-Identifier: String = {
-    r"[_a-zA-Z][_a-zA-Z0-9]*" => String::from(<>),
-};
-
 Comma<T>: Vec<T> = {
     <v:(<T> ",")*> <e:T?> => v.into_iter().chain(e).collect()
 };
@@ -232,3 +212,51 @@ Type: ParseType = {
     "[" <Type> "]" => ParseType::Array(Box::new(<>)),
     "(" ")" => ParseType::Unit,
 };
+
+extern {
+    type Location = usize;
+    type Error = lexer::LexicalError;
+
+    enum lexer::Token {
+        "fn" => lexer::Token::FnKeyword,
+        "let" => lexer::Token::LetKeyword,
+        "while" => lexer::Token::WhileKeyword,
+        "loop" => lexer::Token::LoopKeyword,
+        "if" => lexer::Token::IfKeyword,
+        "else" => lexer::Token::ElseKeyword,
+        "return" => lexer::Token::ReturnKeyword,
+        "break" => lexer::Token::BreakKeyword,
+        "continue" => lexer::Token::ContinueKeyword,
+        "print" => lexer::Token::PrintKeyword,
+        "(" => lexer::Token::OpenParen,
+        ")" => lexer::Token::CloseParen,
+        "[" => lexer::Token::OpenSquare,
+        "]" => lexer::Token::CloseSquare,
+        "{" => lexer::Token::OpenBracket,
+        "}" => lexer::Token::CloseBracket,
+        "->" => lexer::Token::Arrow,
+        "," => lexer::Token::Comma,
+        "." => lexer::Token::Dot,
+        ";" => lexer::Token::SemiColon,
+        ":" => lexer::Token::Colon,
+        "+" => lexer::Token::Plus,
+        "-" => lexer::Token::Minus,
+        "*" => lexer::Token::Star,
+        "/" => lexer::Token::Slash,
+        "%" => lexer::Token::Modulo,
+        "!" => lexer::Token::Bang,
+        "<" => lexer::Token::Less,
+        "<=" => lexer::Token::LessEqual,
+        ">" => lexer::Token::Greater,
+        ">=" => lexer::Token::GreaterEqual,
+        "==" => lexer::Token::EqualEqual,
+        "=" => lexer::Token::Equal,
+        "!=" => lexer::Token::BangEqual,
+        "&&" => lexer::Token::AmpAmp,
+        "||" => lexer::Token::PipePipe,
+        IntLiteral => lexer::Token::IntLit(<i64>),
+        DoubleLiteral => lexer::Token::DoubleLit(<f64>),
+        BoolLiteral => lexer::Token::BoolLit(<bool>),
+        Identifier => lexer::Token::Identifier(<String>),
+    }
+}

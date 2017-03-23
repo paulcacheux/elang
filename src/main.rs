@@ -7,10 +7,10 @@ use std::io::Read;
 use std::io;
 use std::path::Path;
 
-//mod parser;
+mod parser;
 mod lexer;
-//mod ast;
-//mod ast_printer;
+mod ast;
+mod ast_printer;
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;
@@ -34,18 +34,15 @@ fn main() {
 
     let input = read_file(matches.value_of("INPUT").unwrap()).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
-    for item in lex {
-        println!("{:?}", item);
+    let tu = match parser::parse_TranslationUnit(lex) {
+        Ok(tu) => tu,
+        Err(err) => {
+            println!("{:?}", err);
+            return
+        }
+    };
+
+    if matches.is_present("ast") {
+        ast_printer::print_ast(&tu);
     }
-    // let tu = match parser::parse_TranslationUnit(&input) {
-    //     Ok(tu) => tu,
-    //     Err(err) => {
-    //         println!("{:?}", err);
-    //         return
-    //     }
-    // };
-    //
-    // if matches.is_present("ast") {
-    //     ast_printer::print_ast(&tu);
-    // }
 }

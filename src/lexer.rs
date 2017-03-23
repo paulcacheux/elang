@@ -4,8 +4,6 @@ use std::str::FromStr;
 
 use itertools::Itertools;
 
-//pub type Spanned<Tok, Loc, Error> = Result<(Loc, Tok, Loc), Error>;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     FnKeyword,
