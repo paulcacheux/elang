@@ -189,7 +189,9 @@ SubscriptOrCallExpr: Spanned<Expression> = {
 };
 
 Term: Expression = {
-    Number => Expression::Number(<>),
+    DoubleLiteral => Expression::Literal(Literal::Double(<>)),
+    IntLiteral => Expression::Literal(Literal::Int(<>)),
+    BoolLiteral => Expression::Literal(Literal::Bool(<>)),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
     <op:UnOp> <expr:Spanned<Term>> => Expression::UnOp(op, Box::new(expr)),
@@ -200,8 +202,20 @@ UnOp: UnOpCode = {
     "!" => UnOpCode::LogicalNot,
 };
 
-Number: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap(),
+IntLiteral: i64 = {
+    r"[1-9][0-9]*" => i64::from_str(<>).unwrap(),
+    "0" => 0,
+};
+
+BoolLiteral: bool = {
+    "true" => true,
+    "false" => false,
+};
+
+DoubleLiteral: f64 = {
+    <i:IntLiteral> <frac:r"\.[0-9]*"> => {
+        f64::from_str(&(i.to_string() + frac)).unwrap()
+    }
 };
 
 Identifier: String = {

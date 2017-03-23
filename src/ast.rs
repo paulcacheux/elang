@@ -1,12 +1,12 @@
 use std::ops::Deref;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TranslationUnit {
     pub stmts: Vec<Spanned<Statement>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     FuncDecl {
         name: String,
@@ -46,14 +46,23 @@ pub enum Statement {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     BinOp(BinOpCode, Box<Spanned<Expression>>, Box<Spanned<Expression>>),
     UnOp(UnOpCode, Box<Spanned<Expression>>),
     FuncCall(Box<Spanned<Expression>>, Vec<Spanned<Expression>>),
     Paren(Box<Spanned<Expression>>),
     Identifier(String),
-    Number(i32),
+    Literal(Literal),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    Int(i64),
+    Double(f64),
+    Char(char),
+    String(String),
+    Bool(bool),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

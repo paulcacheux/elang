@@ -27,4 +27,4 @@ fn test_while(x: int) {
     }
 }
 
-print neg_square(2 * 6);
+print neg_square(2 * 6.3);
