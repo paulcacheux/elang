@@ -58,7 +58,7 @@ impl ASTPrinter {
                     ty.as_ref().map(|ty| ty.to_string()).unwrap_or(String::from("undefined"))
                 );
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             },
             Loop { ref stmt } => {
@@ -70,7 +70,7 @@ impl ASTPrinter {
             While { ref cond, ref stmt } => {
                 println!("WhileStmt");
                 self.0 += 1;
-                self.print_expr(cond);
+                self.print_expression(cond);
                 self.print_statement(stmt);
                 self.0 -= 1;
             },
@@ -82,7 +82,7 @@ impl ASTPrinter {
                     self.print_tab();
                     println!("IfBranch");
                     self.0 += 1;
-                    self.print_expr(cond);
+                    self.print_expression(cond);
                     self.print_statement(stmt);
                     self.0 -= 1;
                 }
@@ -106,56 +106,56 @@ impl ASTPrinter {
             Return { ref expr } => {
                 println!("ReturnStmt");
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             },
-            Expr { ref expr } => {
+            Expression { ref expr } => {
                 println!("ExprStmt");
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             },
             Print { ref expr } => {
                 println!("PrintStmt");
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             }
         }
     }
 
-    fn print_expr(&mut self, expr: &Spanned<Expr>) {
+    fn print_expression(&mut self, expr: &Spanned<Expression>) {
         self.print_tab();
         self.print_span(&expr.span);
 
-        use self::Expr::*;
+        use self::Expression::*;
         match expr.inner {
             BinOp(op, ref lhs, ref rhs) => {
                 println!("BinOpExpr '{:?}'", op);
                 self.0 += 1;
-                self.print_expr(lhs);
-                self.print_expr(rhs);
+                self.print_expression(lhs);
+                self.print_expression(rhs);
                 self.0 -= 1;
             },
             UnOp(op, ref expr) => {
                 println!("UnOpExpr '{:?}'", op);
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             },
             FuncCall(ref func, ref args) => {
                 println!("FuncCall");
                 self.0 += 1;
-                self.print_expr(func);
+                self.print_expression(func);
                 for arg in args {
-                    self.print_expr(arg);
+                    self.print_expression(arg);
                 }
                 self.0 -= 1;
             },
             Paren(ref expr) => {
                 println!("ParenExpr");
                 self.0 += 1;
-                self.print_expr(expr);
+                self.print_expression(expr);
                 self.0 -= 1;
             },
             Identifier(ref name) => {

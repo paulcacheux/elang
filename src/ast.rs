@@ -20,38 +20,38 @@ pub enum Statement {
     Let {
         name: String,
         ty: Option<ParseType>,
-        expr: Spanned<Expr>,
+        expr: Spanned<Expression>,
     },
     Loop {
         stmt: Box<Spanned<Statement>>,
     },
     While {
-        cond: Spanned<Expr>,
+        cond: Spanned<Expression>,
         stmt: Box<Spanned<Statement>>,
     },
     If {
-        ifs_branches: Vec<(Spanned<Expr>, Spanned<Statement>)>,
+        ifs_branches: Vec<(Spanned<Expression>, Spanned<Statement>)>,
         else_branch: Option<Box<Spanned<Statement>>>,
     },
     Break,
     Continue,
     Return {
-        expr: Spanned<Expr>,
+        expr: Spanned<Expression>,
     },
-    Expr {
-        expr: Spanned<Expr>,
+    Expression {
+        expr: Spanned<Expression>,
     },
     Print {
-        expr: Spanned<Expr>,
+        expr: Spanned<Expression>,
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr {
-    BinOp(BinOpCode, Box<Spanned<Expr>>, Box<Spanned<Expr>>),
-    UnOp(UnOpCode, Box<Spanned<Expr>>),
-    FuncCall(Box<Spanned<Expr>>, Vec<Spanned<Expr>>),
-    Paren(Box<Spanned<Expr>>),
+pub enum Expression {
+    BinOp(BinOpCode, Box<Spanned<Expression>>, Box<Spanned<Expression>>),
+    UnOp(UnOpCode, Box<Spanned<Expression>>),
+    FuncCall(Box<Spanned<Expression>>, Vec<Spanned<Expression>>),
+    Paren(Box<Spanned<Expression>>),
     Identifier(String),
     Number(i32),
 }

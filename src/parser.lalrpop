@@ -76,7 +76,7 @@ IfStmt: Statement = {
     }
 };
 
-ElseIfPart: (Spanned<Expr>, Spanned<Statement>) = {
+ElseIfPart: (Spanned<Expression>, Spanned<Statement>) = {
     "else" "if" <Expr> <Spanned<CompoundStmt>>
 };
 
@@ -97,7 +97,7 @@ ReturnStmt: Statement = {
 };
 
 ExprStmt: Statement = {
-    <Expr> ";" => Statement::Expr { expr: <> }
+    <Expr> ";" => Statement::Expression { expr: <> }
 };
 
 PrintStmt: Statement = {
@@ -106,30 +106,30 @@ PrintStmt: Statement = {
 
 Expr = AssignExpr;
 
-AssignExpr: Spanned<Expr> = {
+AssignExpr: Spanned<Expression> = {
     <l:@L> <lhs:LogOrExpr> "=" <rhs:AssignExpr> <r:@R> => {
         Spanned::new(
-            Expr::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
     LogOrExpr
 };
 
-LogOrExpr: Spanned<Expr> = {
+LogOrExpr: Spanned<Expression> = {
     <l:@L> <lhs:LogAndExpr> "||" <rhs:LogAndExpr> <r:@R> => {
         Spanned::new(
-            Expr::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
     LogAndExpr
 };
 
-LogAndExpr: Spanned<Expr> = {
+LogAndExpr: Spanned<Expression> = {
     <l:@L> <lhs:EqExpr> "&&" <rhs:EqExpr> <r:@R> => {
         Spanned::new(
-            Expr::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
@@ -164,35 +164,35 @@ FactorOp: BinOpCode = {
     "%" => BinOpCode::Mod,
 };
 
-Tier<Op, NextTier>: Spanned<Expr> = {
+Tier<Op, NextTier>: Spanned<Expression> = {
     <l:@L> <lhs:Tier<Op, NextTier>> <op:Op> <rhs:NextTier> <r:@R> => {
         Spanned::new(
-            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
     NextTier
 };
 
-SubscriptOrCallExpr: Spanned<Expr> = {
+SubscriptOrCallExpr: Spanned<Expression> = {
     <l:@L> <lhs:Spanned<Term>> "[" <rhs:Expr> "]" <r:@R> =>
         Spanned::new(
-            Expr::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         ),
     <l:@L> <lhs:Spanned<Term>> "(" <rhs:Comma<Expr>> ")" <r:@R> =>
         Spanned::new(
-            Expr::FuncCall(Box::new(lhs), rhs),
+            Expression::FuncCall(Box::new(lhs), rhs),
             Span(l, r)
         ),
     Spanned<Term>
 };
 
-Term: Expr = {
-    Number => Expr::Number(<>),
-    Identifier => Expr::Identifier(<>),
-    "(" <Expr> ")" => Expr::Paren(Box::new(<>)),
-    <op:UnOp> <expr:Spanned<Term>> => Expr::UnOp(op, Box::new(expr)),
+Term: Expression = {
+    Number => Expression::Number(<>),
+    Identifier => Expression::Identifier(<>),
+    "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
+    <op:UnOp> <expr:Spanned<Term>> => Expression::UnOp(op, Box::new(expr)),
 };
 
 UnOp: UnOpCode = {

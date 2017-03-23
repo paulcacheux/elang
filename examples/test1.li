@@ -16,6 +16,8 @@ fn test_if(x: int) {
 fn test_loop(x: int) {
     loop {
         return x;
+        break;
+        continue;
     }
 }
 

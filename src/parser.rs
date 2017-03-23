@@ -52,40 +52,40 @@ mod __parse__TranslationUnit {
         Nt_28_22_2d_3e_22_20_3cType_3e_29_3f(::std::option::Option<ParseType>),
         Nt_28_22_3a_22_20_3cType_3e_29(ParseType),
         Nt_28_22_3a_22_20_3cType_3e_29_3f(::std::option::Option<ParseType>),
-        Nt_28_3cExpr_3e_20_22_2c_22_29(Spanned<Expr>),
-        Nt_28_3cExpr_3e_20_22_2c_22_29_2a(::std::vec::Vec<Spanned<Expr>>),
-        Nt_28_3cExpr_3e_20_22_2c_22_29_2b(::std::vec::Vec<Spanned<Expr>>),
+        Nt_28_3cExpr_3e_20_22_2c_22_29(Spanned<Expression>),
+        Nt_28_3cExpr_3e_20_22_2c_22_29_2a(::std::vec::Vec<Spanned<Expression>>),
+        Nt_28_3cExpr_3e_20_22_2c_22_29_2b(::std::vec::Vec<Spanned<Expression>>),
         Nt_28_3cParamDecl_3e_20_22_2c_22_29((String, ParseType)),
         Nt_28_3cParamDecl_3e_20_22_2c_22_29_2a(::std::vec::Vec<(String, ParseType)>),
         Nt_28_3cParamDecl_3e_20_22_2c_22_29_2b(::std::vec::Vec<(String, ParseType)>),
         Nt_40L(usize),
         Nt_40R(usize),
-        NtAssignExpr(Spanned<Expr>),
+        NtAssignExpr(Spanned<Expression>),
         NtBreakStmt(Statement),
-        NtComma_3cExpr_3e(Vec<Spanned<Expr>>),
+        NtComma_3cExpr_3e(Vec<Spanned<Expression>>),
         NtComma_3cParamDecl_3e(Vec<(String, ParseType)>),
-        NtCompExpr(Spanned<Expr>),
+        NtCompExpr(Spanned<Expression>),
         NtCompOp(BinOpCode),
         NtCompoundStmt(Statement),
         NtContinueStmt(Statement),
-        NtElseIfPart((Spanned<Expr>, Spanned<Statement>)),
-        NtElseIfPart_2a(::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>),
-        NtElseIfPart_2b(::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>),
+        NtElseIfPart((Spanned<Expression>, Spanned<Statement>)),
+        NtElseIfPart_2a(::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>),
+        NtElseIfPart_2b(::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>),
         NtElsePart(Spanned<Statement>),
         NtElsePart_3f(::std::option::Option<Spanned<Statement>>),
-        NtEqExpr(Spanned<Expr>),
+        NtEqExpr(Spanned<Expression>),
         NtEqOp(BinOpCode),
-        NtExpr(Spanned<Expr>),
-        NtExpr_3f(::std::option::Option<Spanned<Expr>>),
+        NtExpr(Spanned<Expression>),
+        NtExpr_3f(::std::option::Option<Spanned<Expression>>),
         NtExprStmt(Statement),
-        NtFactorExpr(Spanned<Expr>),
+        NtFactorExpr(Spanned<Expression>),
         NtFactorOp(BinOpCode),
         NtFuncDecl(Statement),
         NtIdentifier(String),
         NtIfStmt(Statement),
         NtLetStmt(Statement),
-        NtLogAndExpr(Spanned<Expr>),
-        NtLogOrExpr(Spanned<Expr>),
+        NtLogAndExpr(Spanned<Expression>),
+        NtLogOrExpr(Spanned<Expression>),
         NtLoopStmt(Statement),
         NtNumber(i32),
         NtParamDecl((String, ParseType)),
@@ -102,19 +102,19 @@ mod __parse__TranslationUnit {
         NtSpanned_3cLoopStmt_3e(Spanned<Statement>),
         NtSpanned_3cPrintStmt_3e(Spanned<Statement>),
         NtSpanned_3cReturnStmt_3e(Spanned<Statement>),
-        NtSpanned_3cTerm_3e(Spanned<Expr>),
+        NtSpanned_3cTerm_3e(Spanned<Expression>),
         NtSpanned_3cWhileStmt_3e(Spanned<Statement>),
         NtStatement(Spanned<Statement>),
         NtStatement_2a(::std::vec::Vec<Spanned<Statement>>),
         NtStatement_2b(::std::vec::Vec<Spanned<Statement>>),
-        NtSubscriptOrCallExpr(Spanned<Expr>),
-        NtSumExpr(Spanned<Expr>),
+        NtSubscriptOrCallExpr(Spanned<Expression>),
+        NtSumExpr(Spanned<Expression>),
         NtSumOp(BinOpCode),
-        NtTerm(Expr),
-        NtTier_3cCompOp_2c_20SumExpr_3e(Spanned<Expr>),
-        NtTier_3cEqOp_2c_20CompExpr_3e(Spanned<Expr>),
-        NtTier_3cFactorOp_2c_20SubscriptOrCallExpr_3e(Spanned<Expr>),
-        NtTier_3cSumOp_2c_20FactorExpr_3e(Spanned<Expr>),
+        NtTerm(Expression),
+        NtTier_3cCompOp_2c_20SumExpr_3e(Spanned<Expression>),
+        NtTier_3cEqOp_2c_20CompExpr_3e(Spanned<Expression>),
+        NtTier_3cFactorOp_2c_20SubscriptOrCallExpr_3e(Spanned<Expression>),
+        NtTier_3cSumOp_2c_20FactorExpr_3e(Spanned<Expression>),
         NtTranslationUnit(TranslationUnit),
         NtType(ParseType),
         NtUnOp(UnOpCode),
@@ -7178,7 +7178,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Nt_28_3cExpr_3e_20_22_2c_22_29(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7188,7 +7188,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Spanned<Expr>>, usize) {
+    ) -> (usize, ::std::vec::Vec<Spanned<Expression>>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Nt_28_3cExpr_3e_20_22_2c_22_29_2a(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7198,7 +7198,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Spanned<Expr>>, usize) {
+    ) -> (usize, ::std::vec::Vec<Spanned<Expression>>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Nt_28_3cExpr_3e_20_22_2c_22_29_2b(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7258,7 +7258,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtAssignExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7278,7 +7278,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Vec<Spanned<Expr>>, usize) {
+    ) -> (usize, Vec<Spanned<Expression>>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtComma_3cExpr_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7298,7 +7298,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtCompExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7338,7 +7338,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, (Spanned<Expr>, Spanned<Statement>), usize) {
+    ) -> (usize, (Spanned<Expression>, Spanned<Statement>), usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtElseIfPart(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7348,7 +7348,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize) {
+    ) -> (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtElseIfPart_2a(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7358,7 +7358,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize) {
+    ) -> (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtElseIfPart_2b(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7388,7 +7388,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtEqExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7408,7 +7408,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7418,7 +7418,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Spanned<Expr>>, usize) {
+    ) -> (usize, ::std::option::Option<Spanned<Expression>>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtExpr_3f(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7438,7 +7438,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtFactorExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7498,7 +7498,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtLogAndExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7508,7 +7508,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtLogOrExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7678,7 +7678,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtSpanned_3cTerm_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7728,7 +7728,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtSubscriptOrCallExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7738,7 +7738,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtSumExpr(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7758,7 +7758,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Expr, usize) {
+    ) -> (usize, Expression, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtTerm(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7768,7 +7768,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtTier_3cCompOp_2c_20SumExpr_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7778,7 +7778,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtTier_3cEqOp_2c_20CompExpr_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7788,7 +7788,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtTier_3cFactorOp_2c_20SubscriptOrCallExpr_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -7798,7 +7798,7 @@ mod __parse__TranslationUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Spanned<Expr>, usize) {
+    ) -> (usize, Spanned<Expression>, usize) {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::NtTier_3cSumOp_2c_20FactorExpr_3e(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
@@ -10196,7 +10196,7 @@ pub fn __action16<
     (_, id, _): (usize, String, usize),
     (_, ty, _): (usize, ::std::option::Option<ParseType>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, expr, _): (usize, Spanned<Expr>, usize),
+    (_, expr, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> Statement
 {
@@ -10225,7 +10225,7 @@ pub fn __action18<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, expr, _): (usize, Spanned<Expr>, usize),
+    (_, expr, _): (usize, Spanned<Expression>, usize),
     (_, stmt, _): (usize, Spanned<Statement>, usize),
 ) -> Statement
 {
@@ -10241,9 +10241,9 @@ pub fn __action19<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, if_cond, _): (usize, Spanned<Expr>, usize),
+    (_, if_cond, _): (usize, Spanned<Expression>, usize),
     (_, if_stmt, _): (usize, Spanned<Statement>, usize),
-    (_, elseifs, _): (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
+    (_, elseifs, _): (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
     (_, else_part, _): (usize, ::std::option::Option<Spanned<Statement>>, usize),
 ) -> Statement
 {
@@ -10264,9 +10264,9 @@ pub fn __action20<
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, __1, _): (usize, Spanned<Statement>, usize),
-) -> (Spanned<Expr>, Spanned<Statement>)
+) -> (Spanned<Expression>, Spanned<Statement>)
 {
     (__0, __1)
 }
@@ -10313,7 +10313,7 @@ pub fn __action24<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> Statement
 {
@@ -10325,11 +10325,11 @@ pub fn __action25<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> Statement
 {
-    Statement::Expr { expr: __0 }
+    Statement::Expression { expr: __0 }
 }
 
 #[allow(unused_variables)]
@@ -10338,7 +10338,7 @@ pub fn __action26<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> Statement
 {
@@ -10350,8 +10350,8 @@ pub fn __action27<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10362,15 +10362,15 @@ pub fn __action28<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10381,8 +10381,8 @@ pub fn __action29<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10393,15 +10393,15 @@ pub fn __action30<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10412,8 +10412,8 @@ pub fn __action31<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10424,15 +10424,15 @@ pub fn __action32<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10443,8 +10443,8 @@ pub fn __action33<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10454,8 +10454,8 @@ pub fn __action34<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10465,8 +10465,8 @@ pub fn __action35<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10476,8 +10476,8 @@ pub fn __action36<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10487,8 +10487,8 @@ pub fn __action37<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10620,15 +10620,15 @@ pub fn __action49<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     Spanned::new(
-            Expr::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
 }
@@ -10639,15 +10639,15 @@ pub fn __action50<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-    (_, rhs, _): (usize, Vec<Spanned<Expr>>, usize),
+    (_, rhs, _): (usize, Vec<Spanned<Expression>>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     Spanned::new(
-            Expr::FuncCall(Box::new(lhs), rhs),
+            Expression::FuncCall(Box::new(lhs), rhs),
             Span(l, r)
         )
 }
@@ -10657,8 +10657,8 @@ pub fn __action51<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10669,9 +10669,9 @@ pub fn __action52<
 >(
     input: &'input str,
     (_, __0, _): (usize, i32, usize),
-) -> Expr
+) -> Expression
 {
-    Expr::Number(__0)
+    Expression::Number(__0)
 }
 
 #[allow(unused_variables)]
@@ -10680,9 +10680,9 @@ pub fn __action53<
 >(
     input: &'input str,
     (_, __0, _): (usize, String, usize),
-) -> Expr
+) -> Expression
 {
-    Expr::Identifier(__0)
+    Expression::Identifier(__0)
 }
 
 #[allow(unused_variables)]
@@ -10691,11 +10691,11 @@ pub fn __action54<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Expr
+) -> Expression
 {
-    Expr::Paren(Box::new(__0))
+    Expression::Paren(Box::new(__0))
 }
 
 #[allow(unused_variables)]
@@ -10704,10 +10704,10 @@ pub fn __action55<
 >(
     input: &'input str,
     (_, op, _): (usize, UnOpCode, usize),
-    (_, expr, _): (usize, Spanned<Expr>, usize),
-) -> Expr
+    (_, expr, _): (usize, Spanned<Expression>, usize),
+) -> Expression
 {
-    Expr::UnOp(op, Box::new(expr))
+    Expression::UnOp(op, Box::new(expr))
 }
 
 #[allow(unused_variables)]
@@ -10807,9 +10807,9 @@ pub fn __action64<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-    (_, e, _): (usize, ::std::option::Option<Spanned<Expr>>, usize),
-) -> Vec<Spanned<Expr>>
+    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+    (_, e, _): (usize, ::std::option::Option<Spanned<Expression>>, usize),
+) -> Vec<Spanned<Expression>>
 {
     v.into_iter().chain(e).collect()
 }
@@ -10820,9 +10820,9 @@ pub fn __action65<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, t, _): (usize, Expr, usize),
+    (_, t, _): (usize, Expression, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     Spanned::new(
         t,
@@ -10836,15 +10836,15 @@ pub fn __action66<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, op, _): (usize, BinOpCode, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10855,8 +10855,8 @@ pub fn __action67<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10867,15 +10867,15 @@ pub fn __action68<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, op, _): (usize, BinOpCode, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10886,8 +10886,8 @@ pub fn __action69<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10898,15 +10898,15 @@ pub fn __action70<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, op, _): (usize, BinOpCode, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10917,8 +10917,8 @@ pub fn __action71<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -10929,15 +10929,15 @@ pub fn __action72<
 >(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
-    (_, lhs, _): (usize, Spanned<Expr>, usize),
+    (_, lhs, _): (usize, Spanned<Expression>, usize),
     (_, op, _): (usize, BinOpCode, usize),
-    (_, rhs, _): (usize, Spanned<Expr>, usize),
+    (_, rhs, _): (usize, Spanned<Expression>, usize),
     (_, r, _): (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     {
         Spanned::new(
-            Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -10948,8 +10948,8 @@ pub fn __action73<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -11008,7 +11008,7 @@ pub fn __action78<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>
+) -> ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>
 {
     vec![]
 }
@@ -11018,8 +11018,8 @@ pub fn __action79<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
-) -> ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>
+    (_, v, _): (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
+) -> ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>
 {
     v
 }
@@ -11391,8 +11391,8 @@ pub fn __action107<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, (Spanned<Expr>, Spanned<Statement>), usize),
-) -> ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>
+    (_, __0, _): (usize, (Spanned<Expression>, Spanned<Statement>), usize),
+) -> ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>
 {
     vec![__0]
 }
@@ -11402,9 +11402,9 @@ pub fn __action108<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
-    (_, e, _): (usize, (Spanned<Expr>, Spanned<Statement>), usize),
-) -> ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>
+    (_, v, _): (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
+    (_, e, _): (usize, (Spanned<Expression>, Spanned<Statement>), usize),
+) -> ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -11414,8 +11414,8 @@ pub fn __action109<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> ::std::option::Option<Spanned<Expr>>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> ::std::option::Option<Spanned<Expression>>
 {
     Some(__0)
 }
@@ -11427,7 +11427,7 @@ pub fn __action110<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Spanned<Expr>>
+) -> ::std::option::Option<Spanned<Expression>>
 {
     None
 }
@@ -11439,7 +11439,7 @@ pub fn __action111<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Spanned<Expr>>
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     vec![]
 }
@@ -11449,8 +11449,8 @@ pub fn __action112<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-) -> ::std::vec::Vec<Spanned<Expr>>
+    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     v
 }
@@ -11460,9 +11460,9 @@ pub fn __action113<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
+    (_, __0, _): (usize, Spanned<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     (__0)
 }
@@ -11472,8 +11472,8 @@ pub fn __action114<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Spanned<Expr>, usize),
-) -> ::std::vec::Vec<Spanned<Expr>>
+    (_, __0, _): (usize, Spanned<Expression>, usize),
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     vec![__0]
 }
@@ -11483,9 +11483,9 @@ pub fn __action115<
     'input,
 >(
     input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-    (_, e, _): (usize, Spanned<Expr>, usize),
-) -> ::std::vec::Vec<Spanned<Expr>>
+    (_, v, _): (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+    (_, e, _): (usize, Spanned<Expression>, usize),
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -11637,7 +11637,7 @@ pub fn __action122<
     __2: (usize, &'input str, usize),
     __3: (usize, ParseType, usize),
     __4: (usize, &'input str, usize),
-    __5: (usize, Spanned<Expr>, usize),
+    __5: (usize, Spanned<Expression>, usize),
     __6: (usize, &'input str, usize),
 ) -> Statement
 {
@@ -11668,7 +11668,7 @@ pub fn __action123<
     __0: (usize, &'input str, usize),
     __1: (usize, String, usize),
     __2: (usize, &'input str, usize),
-    __3: (usize, Spanned<Expr>, usize),
+    __3: (usize, Spanned<Expression>, usize),
     __4: (usize, &'input str, usize),
 ) -> Statement
 {
@@ -11696,9 +11696,9 @@ pub fn __action124<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Spanned<Expr>>
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -11719,10 +11719,10 @@ pub fn __action125<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __0: (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Spanned<Expr>>
+) -> ::std::vec::Vec<Spanned<Expression>>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -11744,8 +11744,8 @@ pub fn __action126<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::option::Option<Spanned<Expr>>, usize),
-) -> Vec<Spanned<Expr>>
+    __0: (usize, ::std::option::Option<Spanned<Expression>>, usize),
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -11767,9 +11767,9 @@ pub fn __action127<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-    __1: (usize, ::std::option::Option<Spanned<Expr>>, usize),
-) -> Vec<Spanned<Expr>>
+    __0: (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+    __1: (usize, ::std::option::Option<Spanned<Expression>>, usize),
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();
@@ -11884,11 +11884,11 @@ pub fn __action132<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -11913,11 +11913,11 @@ pub fn __action133<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -11942,11 +11942,11 @@ pub fn __action134<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12221,9 +12221,9 @@ pub fn __action145<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expr, usize),
+    __0: (usize, Expression, usize),
     __1: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12271,12 +12271,12 @@ pub fn __action147<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12302,12 +12302,12 @@ pub fn __action148<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Vec<Spanned<Expr>>, usize),
+    __2: (usize, Vec<Spanned<Expression>>, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12333,11 +12333,11 @@ pub fn __action149<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12362,11 +12362,11 @@ pub fn __action150<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12391,11 +12391,11 @@ pub fn __action151<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12420,11 +12420,11 @@ pub fn __action152<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, usize, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
@@ -12449,10 +12449,10 @@ pub fn __action153<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12476,10 +12476,10 @@ pub fn __action154<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12503,10 +12503,10 @@ pub fn __action155<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12760,8 +12760,8 @@ pub fn __action166<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expr, usize),
-) -> Spanned<Expr>
+    __0: (usize, Expression, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
@@ -12806,11 +12806,11 @@ pub fn __action168<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Spanned<Expr>, usize),
+    __2: (usize, Spanned<Expression>, usize),
     __3: (usize, &'input str, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
@@ -12835,11 +12835,11 @@ pub fn __action169<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, &'input str, usize),
-    __2: (usize, Vec<Spanned<Expr>>, usize),
+    __2: (usize, Vec<Spanned<Expression>>, usize),
     __3: (usize, &'input str, usize),
-) -> Spanned<Expr>
+) -> Spanned<Expression>
 {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
@@ -12864,10 +12864,10 @@ pub fn __action170<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12891,10 +12891,10 @@ pub fn __action171<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12918,10 +12918,10 @@ pub fn __action172<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12945,10 +12945,10 @@ pub fn __action173<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
+    __0: (usize, Spanned<Expression>, usize),
     __1: (usize, BinOpCode, usize),
-    __2: (usize, Spanned<Expr>, usize),
-) -> Spanned<Expr>
+    __2: (usize, Spanned<Expression>, usize),
+) -> Spanned<Expression>
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
@@ -12973,7 +12973,7 @@ pub fn __action174<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
     __3: (usize, ::std::option::Option<Spanned<Statement>>, usize),
 ) -> Statement
@@ -13002,9 +13002,9 @@ pub fn __action175<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
-    __3: (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
+    __3: (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
     __4: (usize, ::std::option::Option<Spanned<Statement>>, usize),
 ) -> Statement
 {
@@ -13031,7 +13031,7 @@ pub fn __action176<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
     __3: (usize, Spanned<Statement>, usize),
 ) -> Statement
@@ -13058,7 +13058,7 @@ pub fn __action177<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
 ) -> Statement
 {
@@ -13085,9 +13085,9 @@ pub fn __action178<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
-    __3: (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
+    __3: (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
     __4: (usize, Spanned<Statement>, usize),
 ) -> Statement
 {
@@ -13114,9 +13114,9 @@ pub fn __action179<
 >(
     input: &'input str,
     __0: (usize, &'input str, usize),
-    __1: (usize, Spanned<Expr>, usize),
+    __1: (usize, Spanned<Expression>, usize),
     __2: (usize, Spanned<Statement>, usize),
-    __3: (usize, ::std::vec::Vec<(Spanned<Expr>, Spanned<Statement>)>, usize),
+    __3: (usize, ::std::vec::Vec<(Spanned<Expression>, Spanned<Statement>)>, usize),
 ) -> Statement
 {
     let __start0 = __3.2.clone();
@@ -13142,8 +13142,8 @@ pub fn __action180<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Spanned<Expr>, usize),
-) -> Vec<Spanned<Expr>>
+    __0: (usize, Spanned<Expression>, usize),
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();
@@ -13165,7 +13165,7 @@ pub fn __action181<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> Vec<Spanned<Expr>>
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __lookbehind.clone();
     let __end0 = __lookahead.clone();
@@ -13186,9 +13186,9 @@ pub fn __action182<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-    __1: (usize, Spanned<Expr>, usize),
-) -> Vec<Spanned<Expr>>
+    __0: (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+    __1: (usize, Spanned<Expression>, usize),
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
@@ -13209,8 +13209,8 @@ pub fn __action183<
     'input,
 >(
     input: &'input str,
-    __0: (usize, ::std::vec::Vec<Spanned<Expr>>, usize),
-) -> Vec<Spanned<Expr>>
+    __0: (usize, ::std::vec::Vec<Spanned<Expression>>, usize),
+) -> Vec<Spanned<Expression>>
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
