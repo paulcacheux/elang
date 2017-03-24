@@ -1,6 +1,8 @@
 use std::ops::Deref;
 use std::fmt;
 
+pub mod printer;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TranslationUnit {
     pub stmts: Vec<Spanned<Statement>>,

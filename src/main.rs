@@ -9,10 +9,9 @@ use std::io::Read;
 use std::io;
 use std::path::Path;
 
+mod ast;
 mod parser;
 mod lexer;
-mod ast;
-mod ast_printer;
 mod diagnostics;
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -45,6 +44,6 @@ fn main() {
     };
 
     if matches.is_present("ast") {
-        ast_printer::print_ast(&tu);
+        ast::printer::print_ast(&tu);
     }
 }
