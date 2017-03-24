@@ -4,8 +4,8 @@ pub fn print_ast(tu: &TranslationUnit) {
     println!("Translation Unit");
     let mut ast_printer = ASTPrinter::new();
     ast_printer.0 += 1;
-    for stmt in &tu.stmts {
-        ast_printer.print_statement(stmt);
+    for decl in &tu.declarations {
+        ast_printer.print_declaration(decl);
     }
 }
 
@@ -27,14 +27,14 @@ impl ASTPrinter {
         print!("({}:{}) ", span.0, span.1);
     }
 
-    fn print_statement(&mut self, stmt: &Spanned<Statement>) {
+    fn print_declaration(&mut self, decl: &Spanned<Declaration>) {
         self.print_tab();
-        self.print_span(&stmt.span);
+        self.print_span(&decl.span);
 
-        use self::Statement::*;
-        match stmt.inner {
-            FuncDecl { ref name, ref params, ref return_ty, ref stmt } => {
-                println!("FuncDecl '{}' '{}'", name, return_ty);
+        use self::Declaration::*;
+        match decl.inner {
+            Function { ref name, ref params, ref return_ty, ref stmt } => {
+                println!("FunctionDecl '{}' '{}'", name, return_ty);
                 self.0 += 1;
                 for param in params {
                     self.print_tab();
@@ -43,6 +43,15 @@ impl ASTPrinter {
                 self.print_statement(stmt);
                 self.0 -= 1;
             },
+        }
+    }
+
+    fn print_statement(&mut self, stmt: &Spanned<Statement>) {
+        self.print_tab();
+        self.print_span(&stmt.span);
+
+        use self::Statement::*;
+        match stmt.inner {
             Compound { ref stmts } => {
                 println!("CompoundStmt");
                 self.0 += 1;

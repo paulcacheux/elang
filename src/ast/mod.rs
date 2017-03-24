@@ -5,17 +5,21 @@ pub mod printer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TranslationUnit {
-    pub stmts: Vec<Spanned<Statement>>,
+    pub declarations: Vec<Spanned<Declaration>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement {
-    FuncDecl {
+pub enum Declaration {
+    Function {
         name: String,
         params: Vec<(String, ParseType)>,
         return_ty: ParseType,
         stmt: Box<Spanned<Statement>>,
-    },
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
     Compound {
         stmts: Vec<Spanned<Statement>>,
     },

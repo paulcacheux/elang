@@ -4,18 +4,24 @@ use ast::*;
 grammar;
 
 pub TranslationUnit: TranslationUnit = {
-    Statement* => TranslationUnit { stmts: <> }
+    Declaration* => TranslationUnit { declarations: <> }
 };
 
-Spanned<T>: Spanned<T> = {
-    <l:@L> <t:T> <r:@R> => Spanned::new(
-        t,
-        Span(l, r)
-    )
+Declaration: Spanned<Declaration> = {
+    Spanned<FuncDecl>,
+};
+
+FuncDecl: Declaration = {
+    "fn" <id:Identifier> "(" <params:Comma<ParamDecl>> ")" <ty:("->" <Type>)?> <stmt:Spanned<CompoundStmt>>
+    => Declaration::Function {
+        name: id,
+        params: params,
+        return_ty: ty.unwrap_or(ParseType::Unit),
+        stmt: Box::new(stmt),
+    }
 };
 
 Statement: Spanned<Statement> = {
-    Spanned<FuncDecl>,
     Spanned<CompoundStmt>,
     Spanned<LetStmt>,
     Spanned<LoopStmt>,
@@ -26,16 +32,6 @@ Statement: Spanned<Statement> = {
     Spanned<ReturnStmt>,
     Spanned<ExprStmt>,
     Spanned<PrintStmt>,
-};
-
-FuncDecl: Statement = {
-    "fn" <id:Identifier> "(" <params:Comma<ParamDecl>> ")" <ty:("->" <Type>)?> <stmt:Spanned<CompoundStmt>>
-    => Statement::FuncDecl {
-        name: id,
-        params: params,
-        return_ty: ty.unwrap_or(ParseType::Unit),
-        stmt: Box::new(stmt),
-    }
 };
 
 ParamDecl: (String, ParseType) = {
@@ -202,15 +198,22 @@ UnOp: UnOpCode = {
     "!" => UnOpCode::LogicalNot,
 };
 
-Comma<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T?> => v.into_iter().chain(e).collect()
-};
-
 Type: ParseType = {
     Identifier => ParseType::Lit(<>),
     "*" <Type> => ParseType::Ptr(Box::new(<>)),
     "[" <Type> "]" => ParseType::Array(Box::new(<>)),
     "(" ")" => ParseType::Unit,
+};
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => v.into_iter().chain(e).collect()
+};
+
+Spanned<T>: Spanned<T> = {
+    <l:@L> <t:T> <r:@R> => Spanned::new(
+        t,
+        Span(l, r)
+    )
 };
 
 extern {
