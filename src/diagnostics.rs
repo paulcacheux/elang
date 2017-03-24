@@ -2,31 +2,33 @@ use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
 
 pub fn print_diagnostic(input: &str, error: ParseError<usize, Token, LexicalError>) {
-    let mut error_lines = Vec::new();
-
-    match error {
+    let error_lines = match error {
         ParseError::InvalidToken { location } => {
-            error_lines.extend(get_lines(input, (location, location + 1)));
             println!("Invalid token.");
+            get_lines(input, (location, location + 1))
         },
         ParseError::UnrecognizedToken { token, expected } => {
-            if let Some((start, tok, end)) = token {
-                error_lines.extend(get_lines(input, (start, end)));
+            let lines = if let Some((start, tok, end)) = token {
                 println!("Unrecognized token: {:?}.", tok);
+                get_lines(input, (start, end))
             } else {
                 println!("Unexpected eof.");
+                Vec::new()
+            };
+            if expected.len() != 0 {
+                println!("Expected one of: {}", expected.join(", "));
             }
-            println!("Expected one of: {}", expected.join(", "));
+            lines
         },
         ParseError::ExtraToken { token: (start, tok, end) } => {
-            error_lines.extend(get_lines(input, (start, end)));
             println!("Extra token: {:?}.", tok);
+            get_lines(input, (start, end))
         },
         ParseError::User { error: LexicalError { msg, pos } } => {
-            error_lines.extend(get_lines(input, (pos, pos + 1)));
             println!("{}", msg);
+            get_lines(input, (pos, pos + 1))
         }
-    }
+    };
 
     for (i, (line, arrow)) in error_lines {
         println!("{:<5}: {}", i+1, line);
