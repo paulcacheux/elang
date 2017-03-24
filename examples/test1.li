@@ -23,7 +23,7 @@ fn test_loop(x: int) {
 
 fn test_while(x: int) {
     while x {
-        x = x - 1;
+        x = x - 1 * ;
     }
 }
 

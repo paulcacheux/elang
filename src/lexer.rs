@@ -3,6 +3,7 @@ use std::iter::Peekable;
 use std::str::FromStr;
 
 use itertools::Itertools;
+use unicode_xid::UnicodeXID;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -50,8 +51,8 @@ pub enum Token {
 
 #[derive(Debug, Clone)]
 pub struct LexicalError {
-    msg: String,
-    pos: usize,
+    pub msg: String,
+    pub pos: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -140,7 +141,7 @@ impl<'input> Iterator for Lexer<'input> {
                     Some(Ok((i, Token::AmpAmp, i+2)))
                 } else {
                     Some(Err(LexicalError {
-                        msg: String::from("Unexpected '&', expected '&&'"),
+                        msg: String::from("Unexpected '&', expected '&&'."),
                         pos: i
                     }))
                 }
@@ -151,19 +152,19 @@ impl<'input> Iterator for Lexer<'input> {
                     Some(Ok((i, Token::PipePipe, i+2)))
                 } else {
                     Some(Err(LexicalError {
-                        msg: String::from("Unexpected '|', expected '||'"),
+                        msg: String::from("Unexpected '|', expected '||'."),
                         pos: i
                     }))
                 }
             },
-            Some((i, c)) if utils::is_digit(c) => {
+            Some((i, c)) if c.is_digit(10) => {
                 let mut lit = c.to_string();
-                lit.extend(self.chars.peeking_take_while(|c| utils::is_digit(c.1)).map(|i| i.1));
+                lit.extend(self.chars.peeking_take_while(|c| c.1.is_digit(10)).map(|i| i.1));
 
                 if let Some(&(_, '.')) = self.chars.peek() {
                     lit.push('.');
                     self.chars.next();
-                    lit.extend(self.chars.peeking_take_while(|c| utils::is_digit(c.1)).map(|i| i.1));
+                    lit.extend(self.chars.peeking_take_while(|c| c.1.is_digit(10)).map(|i| i.1));
 
                     let len = lit.len();
                     Some(Ok((i, Token::DoubleLit(f64::from_str(&lit).unwrap()), i + len)))
@@ -173,15 +174,15 @@ impl<'input> Iterator for Lexer<'input> {
                 }
 
             },
-            Some((i, c)) if utils::is_id_start(c) => {
+            Some((i, c)) if UnicodeXID::is_xid_start(c) => {
                 let mut id = c.to_string();
-                id.extend(self.chars.peeking_take_while(|c| utils::is_id_continue(c.1)).map(|i| i.1));
+                id.extend(self.chars.peeking_take_while(|c| UnicodeXID::is_xid_continue(c.1)).map(|i| i.1));
                 let len = id.len();
                 Some(Ok((i, utils::identifier_or_keyword(id), i + len)))
             },
             Some((i, c)) => {
                 Some(Err(LexicalError {
-                    msg: format!("Unexpected '{}'", c),
+                    msg: format!("Unexpected '{}'.", c),
                     pos: i,
                 }))
             },
@@ -207,27 +208,6 @@ mod utils {
             "true" => Token::BoolLit(true),
             "false" => Token::BoolLit(false),
             _ => Token::Identifier(s),
-        }
-    }
-
-    pub fn is_digit(c: char) -> bool {
-        match c {
-            '0' ... '9' => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_id_start(c: char) -> bool {
-        match c {
-            '_' | 'a' ... 'z' | 'Z' ... 'Z' => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_id_continue(c: char) -> bool {
-        match c {
-            '_' | 'a' ... 'z' | 'Z' ... 'Z' | '0' ... '9' => true,
-            _ => false,
         }
     }
 }

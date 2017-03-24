@@ -1,5 +1,7 @@
 extern crate clap;
 extern crate itertools;
+extern crate unicode_xid;
+extern crate lalrpop_util;
 use clap::{Arg, App};
 
 use std::fs::File;
@@ -11,6 +13,7 @@ mod parser;
 mod lexer;
 mod ast;
 mod ast_printer;
+mod diagnostics;
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;
@@ -37,8 +40,7 @@ fn main() {
     let tu = match parser::parse_TranslationUnit(lex) {
         Ok(tu) => tu,
         Err(err) => {
-            println!("{:?}", err);
-            return
+            return diagnostics::print_diagnostic(&input, err);
         }
     };
 
