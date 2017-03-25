@@ -32,14 +32,14 @@ impl SymbolTable {
 
     }
 
-    fn insert(&mut self, name: String, ty: ir::Type) -> Result<(), SyntaxError> {
+    fn insert(&mut self, name: String, ty: ir::Type) -> bool {
         // can return err if already decl in scope
-        Ok(())
+        true
     }
 
-    fn get_ty(&self, name: &String) -> Result<ir::Type, SyntaxError> {
+    fn get_ty(&self, name: &String) -> Option<ir::Type> {
         // can return err if not in scope
-        Ok(ir::Type::Unit)
+        None
     }
 }
 
@@ -80,9 +80,19 @@ impl IRBuilder {
 
                 self.current_ret_ty = ret_ty;
                 self.sym_table.new_scope();
-                self.sym_table.insert(name.clone(), ty.clone())?;
+                if !self.sym_table.insert(name.clone(), ty.clone()) {
+                    return Err(SyntaxError {
+                        msg: format!("'{}' is already defined in this scope.", name),
+                        span: stmt.span,
+                    })
+                }
                 for (name, ty) in param_names.iter().zip(param_types.iter()) {
-                    self.sym_table.insert(name.clone(), ty.clone())?;
+                    if !self.sym_table.insert(name.clone(), ty.clone()) {
+                        return Err(SyntaxError {
+                            msg: format!("'{}' is already defined as a parameter.", name),
+                            span: stmt.span,
+                        })
+                    }
                 }
                 self.sym_table.new_scope();
                 let stmts = self.build_statement(stmt)?;
@@ -138,7 +148,13 @@ impl IRBuilder {
                     })
                 }
 
-                self.sym_table.insert(name.clone(), ty)?;
+                if !self.sym_table.insert(name.clone(), ty) {
+                    return Err(SyntaxError {
+                        msg: format!("Error '{}' is already defined in this scope.", name),
+                        span: stmt.span,
+                    })
+                }
+
                 stmts.push(ir::Statement::VarDecl {
                     name: name,
                     value: expr_infos.value,
@@ -334,7 +350,167 @@ impl IRBuilder {
     }
 
     fn build_expression(&mut self, expr: Spanned<ast::Expression>) -> Result<ExprInfos, SyntaxError> {
-        unimplemented!()
+        match expr.inner {
+            ast::Expression::Assign(dest, assign_expr) => {
+                let mut stmts = Vec::new();
+
+                let assign_infos = self.build_expression(*assign_expr)?;
+                let assign_infos = self.lvalue_to_rvalue(assign_infos);
+                stmts.extend(assign_infos.stmts);
+
+                let dest_infos = self.build_expression(*dest)?;
+                stmts.extend(dest_infos.stmts);
+
+                if let ir::Type::LValue(ty) = dest_infos.ty {
+                    if *ty == assign_infos.ty {
+                        stmts.push(ir::Statement::LValueSet {
+                            lvalue: dest_infos.value,
+                            rvalue: assign_infos.value,
+                        });
+
+                        Ok(ExprInfos {
+                            stmts: stmts,
+                            value: assign_infos.value,
+                            ty: *ty,
+                        })
+                    } else {
+                        Err(SyntaxError {
+                            msg: format!("Mismatching types in assignment."),
+                            span: expr.span,
+                        })
+                    }
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("Not assignable."),
+                        span: expr.span
+                    })
+                }
+
+            },
+            ast::Expression::Subscript(array, index) => {
+                let mut stmts = Vec::new();
+
+                let array_infos = self.build_expression(*array)?;
+                let array_infos = self.lvalue_to_rvalue(array_infos);
+                stmts.extend(array_infos.stmts);
+
+                let index_infos = self.build_expression(*index)?;
+                let index_infos = self.lvalue_to_rvalue(index_infos);
+                stmts.extend(index_infos.stmts);
+
+                if let ir::Type::Array(ty) = array_infos.ty {
+                    if let ir::Type::Int = index_infos.ty {
+                        let val = self.new_temp();
+                        stmts.push(ir::Statement::Assign {
+                            dest: val,
+                            expr: ir::Expr::Subscript(array_infos.value, index_infos.value),
+                        });
+
+                        Ok(ExprInfos {
+                            stmts: stmts,
+                            value: val,
+                            ty: *ty
+                        })
+                    } else {
+                        Err(SyntaxError {
+                            msg: format!("Index must be an int."),
+                            span: expr.span,
+                        })
+                    }
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("Not an array."),
+                        span: expr.span,
+                    })
+                }
+            },
+            ast::Expression::FuncCall(func, params) => {
+                let mut stmts = Vec::new();
+                let func_infos = self.build_expression(*func)?;
+                let func_infos = self.lvalue_to_rvalue(func_infos);
+                stmts.extend(func_infos.stmts);
+
+                let mut provided_param_types = Vec::with_capacity(params.len());
+                let mut param_values = Vec::with_capacity(params.len());
+                for param in params {
+                    let param_infos = self.build_expression(param)?;
+                    let param_infos = self.lvalue_to_rvalue(param_infos);
+                    stmts.extend(param_infos.stmts);
+                    provided_param_types.push(param_infos.ty);
+                    param_values.push(param_infos.value);
+                }
+
+                if let ir::Type::Function(ret, param_types) = func_infos.ty {
+                    if param_types != provided_param_types {
+                        return Err(SyntaxError {
+                            msg: format!("Mismatching types in function call."),
+                            span: expr.span,
+                        })
+                    }
+
+                    let val = self.new_temp();
+                    stmts.push(ir::Statement::Assign {
+                        dest: val,
+                        expr: ir::Expr::FuncCall(func_infos.value, param_values),
+                    });
+
+                    Ok(ExprInfos {
+                        stmts: stmts,
+                        value: val,
+                        ty: *ret
+                    })
+
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("Error not callable."),
+                        span: expr.span,
+                    })
+                }
+
+            },
+            ast::Expression::Paren(sub_expr) => {
+                self.build_expression(*sub_expr)
+            },
+            ast::Expression::Identifier(id) => {
+                let ty = if let Some(ty) = self.sym_table.get_ty(&id) {
+                    ty
+                } else {
+                    return Err(SyntaxError {
+                        msg: format!("'{}' is undefined here.", id),
+                        span: expr.span,
+                    })
+                };
+
+                let val = self.new_temp();
+
+                Ok(ExprInfos {
+                    stmts: vec![ir::Statement::Assign {
+                        dest: val,
+                        expr: ir::Expr::LoadVar(id),
+                    }],
+                    value: val,
+                    ty: ir::Type::LValue(Box::new(ty.clone())),
+                })
+            },
+            ast::Expression::Literal(literal) => {
+                let val = self.new_temp();
+                let ty = match &literal {
+                    &ast::Literal::Int(_) => ir::Type::Int,
+                    &ast::Literal::Double(_) => ir::Type::Double,
+                    &ast::Literal::Bool(_) => ir::Type::Bool,
+                };
+
+                Ok(ExprInfos {
+                    stmts: vec![ir::Statement::Assign {
+                        dest: val,
+                        expr: ir::Expr::Literal(literal),
+                    }],
+                    value: val,
+                    ty: ty,
+                })
+            },
+            _ => unimplemented!()
+        }
     }
 }
 

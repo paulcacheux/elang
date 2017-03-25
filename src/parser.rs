@@ -7768,7 +7768,7 @@ pub fn __action28<
 {
     {
         Spanned::new(
-            Expression::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
+            Expression::Assign(Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     }
@@ -7963,7 +7963,7 @@ pub fn __action49<
 ) -> Spanned<Expression>
 {
     Spanned::new(
-            Expression::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
+            Expression::Subscript(Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
 }

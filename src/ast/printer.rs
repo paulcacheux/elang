@@ -146,6 +146,20 @@ impl ASTPrinter {
 
         use self::Expression::*;
         match expr.inner {
+            Assign(ref lhs, ref rhs) => {
+                println!("AssignExpr");
+                self.0 += 1;
+                self.print_expression(lhs);
+                self.print_expression(rhs);
+                self.0 -= 1;
+            },
+            Subscript(ref array, ref index) => {
+                println!("SubscriptExpr");
+                self.0 += 1;
+                self.print_expression(array);
+                self.print_expression(index);
+                self.0 -= 1;
+            },
             BinOp(op, ref lhs, ref rhs) => {
                 println!("BinOpExpr '{:?}'", op);
                 self.0 += 1;

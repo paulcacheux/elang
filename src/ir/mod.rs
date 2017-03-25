@@ -46,6 +46,10 @@ pub enum Statement {
         name: String,
         value: Value,
     },
+    LValueSet {
+        lvalue: Value,
+        rvalue: Value,
+    },
     Assign {
         dest: Value,
         expr: Expr,

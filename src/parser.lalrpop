@@ -104,7 +104,7 @@ Expr = AssignExpr;
 AssignExpr: Spanned<Expression> = {
     <l:@L> <lhs:LogOrExpr> "=" <rhs:AssignExpr> <r:@R> => {
         Spanned::new(
-            Expression::BinOp(BinOpCode::Assign, Box::new(lhs), Box::new(rhs)),
+            Expression::Assign(Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
@@ -172,7 +172,7 @@ Tier<Op, NextTier>: Spanned<Expression> = {
 SubscriptOrCallExpr: Spanned<Expression> = {
     <l:@L> <lhs:Spanned<Term>> "[" <rhs:Expr> "]" <r:@R> =>
         Spanned::new(
-            Expression::BinOp(BinOpCode::Subscript, Box::new(lhs), Box::new(rhs)),
+            Expression::Subscript(Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         ),
     <l:@L> <lhs:Spanned<Term>> "(" <rhs:Comma<Expr>> ")" <r:@R> =>

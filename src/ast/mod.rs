@@ -55,6 +55,8 @@ pub enum Statement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
+    Assign(Box<Spanned<Expression>>, Box<Spanned<Expression>>),
+    Subscript(Box<Spanned<Expression>>, Box<Spanned<Expression>>),
     BinOp(BinOpCode, Box<Spanned<Expression>>, Box<Spanned<Expression>>),
     UnOp(UnOpCode, Box<Spanned<Expression>>),
     FuncCall(Box<Spanned<Expression>>, Vec<Spanned<Expression>>),
@@ -72,8 +74,6 @@ pub enum Literal {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOpCode {
-    Assign,
-    Subscript,
     Add,
     Sub,
     Times,
