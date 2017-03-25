@@ -12,9 +12,9 @@ pub struct TranslationUnit {
 pub enum Declaration {
     Function {
         name: String,
-        params: Vec<(String, ParseType)>,
-        return_ty: ParseType,
-        stmt: Box<Spanned<Statement>>,
+        params: Vec<(String, Spanned<ParseType>)>,
+        return_ty: Spanned<ParseType>,
+        stmt: Spanned<Statement>,
     }
 }
 
@@ -25,7 +25,7 @@ pub enum Statement {
     },
     Let {
         name: String,
-        ty: Option<ParseType>,
+        ty: Option<Spanned<ParseType>>,
         expr: Spanned<Expression>,
     },
     Loop {
@@ -36,7 +36,8 @@ pub enum Statement {
         stmt: Box<Spanned<Statement>>,
     },
     If {
-        ifs_branches: Vec<(Spanned<Expression>, Spanned<Statement>)>,
+        if_branch: (Spanned<Expression>, Box<Spanned<Statement>>),
+        elseif_branches: Vec<(Spanned<Expression>, Spanned<Statement>)>,
         else_branch: Option<Box<Spanned<Statement>>>,
     },
     Break,
@@ -123,8 +124,8 @@ impl<T> Deref for Spanned<T> {
 pub enum ParseType {
     Unit,
     Lit(String),
-    Array(Box<ParseType>),
-    Ptr(Box<ParseType>),
+    Array(Box<Spanned<ParseType>>),
+    Ptr(Box<Spanned<ParseType>>),
 }
 
 impl fmt::Display for ParseType {
@@ -132,8 +133,8 @@ impl fmt::Display for ParseType {
         match *self {
             ParseType::Unit => write!(f, "()"),
             ParseType::Lit(ref lit) => write!(f, "{}", lit),
-            ParseType::Array(ref sub) => write!(f, "[{}]", sub),
-            ParseType::Ptr(ref sub) => write!(f, "*{}", sub),
+            ParseType::Array(ref sub) => write!(f, "[{}]", sub.inner),
+            ParseType::Ptr(ref sub) => write!(f, "*{}", sub.inner),
         }
     }
 }

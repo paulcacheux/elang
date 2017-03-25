@@ -34,11 +34,11 @@ impl ASTPrinter {
         use self::Declaration::*;
         match decl.inner {
             Function { ref name, ref params, ref return_ty, ref stmt } => {
-                println!("FunctionDecl '{}' '{}'", name, return_ty);
+                println!("FunctionDecl '{}' '{}'", name, return_ty.inner);
                 self.0 += 1;
                 for param in params {
                     self.print_tab();
-                    println!("ParamDecl '{}':'{}'", param.0, param.1);
+                    println!("ParamDecl '{}':'{}'", param.0, param.1.inner);
                 }
                 self.print_statement(stmt);
                 self.0 -= 1;
@@ -64,7 +64,7 @@ impl ASTPrinter {
                 println!(
                     "LetStmt '{}' '{}'",
                     name,
-                    ty.as_ref().map(|ty| ty.to_string()).unwrap_or(String::from("undefined"))
+                    ty.as_ref().map(|ty| ty.inner.to_string()).unwrap_or(String::from("undefined"))
                 );
                 self.0 += 1;
                 self.print_expression(expr);
@@ -83,13 +83,20 @@ impl ASTPrinter {
                 self.print_statement(stmt);
                 self.0 -= 1;
             },
-            If { ref ifs_branches, ref else_branch } => {
+            If { ref if_branch, ref elseif_branches, ref else_branch } => {
                 println!("IfStmt");
                 self.0 += 1;
 
-                for &(ref cond, ref stmt) in ifs_branches {
+                self.print_tab();
+                println!("IfBranch");
+                self.0 += 1;
+                self.print_expression(&if_branch.0);
+                self.print_statement(&if_branch.1);
+                self.0 -= 1;
+
+                for &(ref cond, ref stmt) in elseif_branches {
                     self.print_tab();
-                    println!("IfBranch");
+                    println!("ElseIfBranch");
                     self.0 += 1;
                     self.print_expression(cond);
                     self.print_statement(stmt);

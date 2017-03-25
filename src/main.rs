@@ -13,6 +13,7 @@ mod ast;
 mod parser;
 mod lexer;
 mod diagnostics;
+mod ir;
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;

@@ -12,13 +12,17 @@ Declaration: Spanned<Declaration> = {
 };
 
 FuncDecl: Declaration = {
-    "fn" <id:Identifier> "(" <params:Comma<ParamDecl>> ")" <ty:("->" <Type>)?> <stmt:Spanned<CompoundStmt>>
+    "fn" <id:Identifier> "(" <params:Comma<ParamDecl>> ")" <r:@R> <ty:("->" <Spanned<Type>>)?> <stmt:Spanned<CompoundStmt>>
     => Declaration::Function {
         name: id,
         params: params,
-        return_ty: ty.unwrap_or(ParseType::Unit),
-        stmt: Box::new(stmt),
+        return_ty: ty.unwrap_or(Spanned::new(ParseType::Unit, Span(r, r + 1))),
+        stmt: stmt,
     }
+};
+
+ParamDecl: (String, Spanned<ParseType>) = {
+    <Identifier> ":" <Spanned<Type>> => (<>)
 };
 
 Statement: Spanned<Statement> = {
@@ -34,16 +38,12 @@ Statement: Spanned<Statement> = {
     Spanned<PrintStmt>,
 };
 
-ParamDecl: (String, ParseType) = {
-    <Identifier> ":" <Type> => (<>)
-};
-
 CompoundStmt: Statement = {
     "{" <Statement*> "}" => Statement::Compound { stmts: <> }
 };
 
 LetStmt: Statement = {
-    "let" <id:Identifier> <ty:(":" <Type>)?> "=" <expr:Expr> ";" => Statement::Let {
+    "let" <id:Identifier> <ty:(":" <Spanned<Type>>)?> "=" <expr:Expr> ";" => Statement::Let {
         name: id,
         ty: ty,
         expr: expr,
@@ -63,10 +63,9 @@ WhileStmt: Statement = {
 
 IfStmt: Statement = {
     "if" <if_cond:Expr> <if_stmt:Spanned<CompoundStmt>> <elseifs:ElseIfPart*> <else_part:ElsePart?> => {
-        let mut v = vec![(if_cond, if_stmt)];
-        v.extend(elseifs);
         Statement::If {
-            ifs_branches: v,
+            if_branch: (if_cond, Box::new(if_stmt)),
+            elseif_branches: elseifs,
             else_branch: else_part.map(Box::new),
         }
     }
@@ -200,8 +199,8 @@ UnOp: UnOpCode = {
 
 Type: ParseType = {
     Identifier => ParseType::Lit(<>),
-    "*" <Type> => ParseType::Ptr(Box::new(<>)),
-    "[" <Type> "]" => ParseType::Array(Box::new(<>)),
+    "*" <Spanned<Type>> => ParseType::Ptr(Box::new(<>)),
+    "[" <Spanned<Type>> "]" => ParseType::Array(Box::new(<>)),
     "(" ")" => ParseType::Unit,
 };
 
