@@ -1,4 +1,5 @@
 use ir;
+use super::tyck;
 use ast;
 use ast::{Span, Spanned};
 
@@ -420,6 +421,65 @@ impl IRBuilder {
                 } else {
                     Err(SyntaxError {
                         msg: format!("Not an array."),
+                        span: expr.span,
+                    })
+                }
+            },
+            ast::Expression::BinOp(opcode, lhs, rhs) => {
+                let mut stmts = Vec::new();
+
+                let lhs_infos = self.build_expression(*lhs)?;
+                let lhs_infos = self.lvalue_to_rvalue(lhs_infos);
+                stmts.extend(lhs_infos.stmts);
+
+                let rhs_infos = self.build_expression(*rhs)?;
+                let rhs_infos = self.lvalue_to_rvalue(rhs_infos);
+                stmts.extend(rhs_infos.stmts);
+
+                if let Some((op, ty)) = tyck::binop_tyck(opcode, &lhs_infos.ty, &rhs_infos.ty) {
+                    let val = self.new_temp();
+
+                    stmts.push(ir::Statement::Assign {
+                        dest: val,
+                        expr: ir::Expr::BinOp(op, lhs_infos.value, rhs_infos.value),
+                    });
+
+                    Ok(ExprInfos {
+                        stmts: stmts,
+                        value: val,
+                        ty: ty,
+                    })
+
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("'{:?}' is not defined for those types.", opcode),
+                        span: expr.span,
+                    })
+                }
+            },
+            ast::Expression::UnOp(opcode, sub_expr) => {
+                let mut stmts = Vec::new();
+
+                let sub_infos = self.build_expression(*sub_expr)?;
+                let sub_infos = self.lvalue_to_rvalue(sub_infos);
+                stmts.extend(sub_infos.stmts);
+
+                if let Some((op, ty)) = tyck::unop_tyck(opcode, &sub_infos.ty) {
+                    let val = self.new_temp();
+
+                    stmts.push(ir::Statement::Assign {
+                        dest: val,
+                        expr: ir::Expr::UnOp(op, sub_infos.value),
+                    });
+
+                    Ok(ExprInfos {
+                        stmts: stmts,
+                        value: val,
+                        ty: ty,
+                    })
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("'{:?}' is not defined for this type.", opcode),
                         span: expr.span,
                     })
                 }

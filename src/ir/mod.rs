@@ -1,6 +1,7 @@
 use ast;
 
 pub mod builder;
+mod tyck;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TranslationUnit {
@@ -70,6 +71,8 @@ pub enum Expr {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOpCode {
+    PtrAdd,
+
     IntAdd,
     IntSub,
     IntTimes,
