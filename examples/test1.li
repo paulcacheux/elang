@@ -1,19 +1,19 @@
-fn neg_square(x: int) {
+fn neg_square(x: double) -> double {
     let y = x * x;
     return -y;
 }
 
-fn test_if(x: int) {
-    if x {
+fn test_if(x: int) -> int {
+    if x < 0 {
         return -x;
-    } else if !x {
+    } else if x > 0 {
         return x + 2;
     } else {
         return x;
     }
 }
 
-fn test_loop(x: int) {
+fn test_loop(x: double) -> double {
     loop {
         return x;
         break;
@@ -22,11 +22,15 @@ fn test_loop(x: int) {
 }
 
 fn test_while(x: int) {
-    while x {
+    while x >= 0 {
         x = x - 1;
     }
 }
 
+fn test_bool(b: bool) -> bool {
+    return !(!b);
+}
+
 fn main() {
-    print neg_square(2 * 6.3);
+    print neg_square(2.0 * 6.3);
 }

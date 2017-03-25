@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use ir;
 use super::tyck;
 use ast;
@@ -6,10 +8,12 @@ use ast::{Span, Spanned};
 pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::TranslationUnit, SyntaxError> {
     let mut ir_builder = IRBuilder::new();
 
+    ir_builder.sym_table.new_scope();
     let mut declarations = Vec::with_capacity(tu.declarations.len());
     for decl in tu.declarations {
         declarations.push(ir_builder.build_declaration(decl)?);
     }
+    ir_builder.sym_table.end_scope();
 
     Ok(ir::TranslationUnit {
         declarations: declarations,
@@ -22,24 +26,30 @@ pub struct SyntaxError {
     pub span: Span,
 }
 
-struct SymbolTable {}
+struct SymbolTable {
+    scopes: Vec<HashMap<String, ir::Type>>,
+}
 
 impl SymbolTable {
     fn new_scope(&mut self) {
-
+        self.scopes.push(HashMap::new());
     }
 
     fn end_scope(&mut self) {
-
+        self.scopes.pop();
     }
 
-    fn insert(&mut self, name: String, ty: ir::Type) -> bool {
-        // can return err if already decl in scope
-        true
+    fn insert(&mut self, name: String, ty: ir::Type) -> bool { // return false if already on scope
+        let scope = self.scopes.last_mut().unwrap();
+        scope.insert(name, ty).is_none()
     }
 
     fn get_ty(&self, name: &String) -> Option<ir::Type> {
-        // can return err if not in scope
+        for scope in self.scopes.iter().rev() {
+            if let Some(ty) = scope.get(name) {
+                return Some(ty.clone());
+            }
+        }
         None
     }
 }
@@ -54,7 +64,7 @@ struct IRBuilder {
 impl IRBuilder {
     fn new() -> Self {
         IRBuilder {
-            sym_table: SymbolTable {},
+            sym_table: SymbolTable { scopes: Vec::new() },
             inside_loop: false,
             current_ret_ty: ir::Type::Unit,
             temp_counter: 0,
@@ -80,13 +90,13 @@ impl IRBuilder {
                 let ty = ir::Type::Function(Box::new(ret_ty.clone()), param_types.clone());
 
                 self.current_ret_ty = ret_ty;
-                self.sym_table.new_scope();
                 if !self.sym_table.insert(name.clone(), ty.clone()) {
                     return Err(SyntaxError {
                         msg: format!("'{}' is already defined in this scope.", name),
                         span: stmt.span,
                     })
                 }
+                self.sym_table.new_scope();
                 for (name, ty) in param_names.iter().zip(param_types.iter()) {
                     if !self.sym_table.insert(name.clone(), ty.clone()) {
                         return Err(SyntaxError {
@@ -149,7 +159,7 @@ impl IRBuilder {
                     })
                 }
 
-                if !self.sym_table.insert(name.clone(), ty) {
+                if !self.sym_table.insert(name.clone(), ty.clone()) {
                     return Err(SyntaxError {
                         msg: format!("Error '{}' is already defined in this scope.", name),
                         span: stmt.span,
@@ -158,6 +168,7 @@ impl IRBuilder {
 
                 stmts.push(ir::Statement::VarDecl {
                     name: name,
+                    ty: ty,
                     value: expr_infos.value,
                 });
 
@@ -569,7 +580,6 @@ impl IRBuilder {
                     ty: ty,
                 })
             },
-            _ => unimplemented!()
         }
     }
 }

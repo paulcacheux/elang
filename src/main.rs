@@ -47,4 +47,15 @@ fn main() {
     if matches.is_present("ast") {
         ast::printer::print_ast(&tu);
     }
+
+    let tu = match ir::builder::build_translation_unit(tu) {
+        Ok(tu) => tu,
+        Err(err) => {
+            println!("{:?}", err);
+            return
+        }
+    };
+
+    println!("SUCCESS");
+    println!("{:#?}", tu);
 }

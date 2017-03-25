@@ -45,6 +45,7 @@ pub enum Statement {
     },
     VarDecl {
         name: String,
+        ty: Type,
         value: Value,
     },
     LValueSet {
@@ -59,7 +60,6 @@ pub enum Statement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Value(Value),
     LoadVar(String),
     LValueToRValue(Value),
     BinOp(BinOpCode, Value, Value),
