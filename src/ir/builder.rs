@@ -71,10 +71,10 @@ impl IRBuilder {
         }
     }
 
-    fn new_temp(&mut self) -> ir::Value {
-        let v = ir::Value(self.temp_counter);
+    fn new_temp(&mut self) -> usize {
+        let temp = self.temp_counter;
         self.temp_counter += 1;
-        v
+        temp
     }
 
     fn build_declaration(&mut self, decl: Spanned<ast::Declaration>) -> Result<ir::Declaration, SyntaxError> {
@@ -114,14 +114,7 @@ impl IRBuilder {
                     name: name,
                     ty: ty,
                     params: param_names,
-                    stmt:
-                        if stmts.len() == 1 {
-                            stmts.into_iter().next().unwrap()
-                        } else {
-                            ir::Statement::Compound {
-                                stmts: stmts
-                            }
-                        }
+                    stmt: ir::Statement::Compound { stmts: stmts }
                 })
             }
         }
@@ -149,10 +142,10 @@ impl IRBuilder {
                 let ty = if let Some(set_ty) = ty {
                     build_type(set_ty)?
                 } else {
-                    expr_infos.ty.clone()
+                    expr_infos.value.ty.clone()
                 };
 
-                if expr_infos.ty != ty {
+                if expr_infos.value.ty != ty {
                     return Err(SyntaxError {
                         msg: format!("Mismatching types in let."),
                         span: stmt.span,
@@ -168,7 +161,6 @@ impl IRBuilder {
 
                 stmts.push(ir::Statement::VarDecl {
                     name: name,
-                    ty: ty,
                     value: expr_infos.value,
                 });
 
@@ -193,7 +185,7 @@ impl IRBuilder {
                 let cond_infos = self.lvalue_to_rvalue(cond_infos);
                 let mut stmts = cond_infos.stmts;
 
-                if cond_infos.ty != ir::Type::Bool {
+                if cond_infos.value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
                         msg: format!("Expected 'bool' type in condition."),
                         span: stmt.span
@@ -224,17 +216,17 @@ impl IRBuilder {
             ast::Statement::If { if_branch, elseif_branches, else_branch } => {
                 let mut stmts = Vec::new();
                 self.sym_table.new_scope();
+
                 let if_cond = self.build_expression(if_branch.0)?;
                 let if_cond = self.lvalue_to_rvalue(if_cond);
+                stmts.extend(if_cond.stmts);
 
-                if if_cond.ty != ir::Type::Bool {
+                if if_cond.value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
                         msg: format!("Expected 'bool' type in condition."),
                         span: stmt.span
                     })
                 }
-
-                stmts.extend(if_cond.stmts);
 
                 self.sym_table.new_scope();
                 let if_stmts = self.build_statement(*if_branch.1)?;
@@ -255,7 +247,7 @@ impl IRBuilder {
                     let cond = self.build_expression(cond)?;
                     let mut cond = self.lvalue_to_rvalue(cond);
 
-                    if cond.ty != ir::Type::Bool {
+                    if cond.value.ty != ir::Type::Bool {
                         return Err(SyntaxError {
                             msg: format!("Expected 'bool' type in condition."),
                             span: stmt.span
@@ -316,7 +308,7 @@ impl IRBuilder {
             ast::Statement::Return { expr } => {
                 let infos = self.build_expression(expr)?;
                 let mut infos = self.lvalue_to_rvalue(infos);
-                if infos.ty == self.current_ret_ty {
+                if infos.value.ty == self.current_ret_ty {
                     infos.stmts.push(ir::Statement::Return {
                         value: infos.value
                     });
@@ -344,17 +336,16 @@ impl IRBuilder {
     }
 
     fn lvalue_to_rvalue(&mut self, infos: ExprInfos) -> ExprInfos {
-        if let ir::Type::LValue(sub) = infos.ty {
+        if let ir::Type::LValue(sub) = infos.value.ty.clone() {
             let mut stmts = infos.stmts;
-            let value = self.new_temp();
+            let id = self.new_temp();
             stmts.push(ir::Statement::Assign {
-                dest: value,
+                dest: id,
                 expr: ir::Expr::LValueToRValue(infos.value),
             });
             ExprInfos {
                 stmts: stmts,
-                value: value,
-                ty: *sub,
+                value: ir::Value { id: id, ty: *sub },
             }
         } else {
             infos
@@ -373,17 +364,16 @@ impl IRBuilder {
                 let dest_infos = self.build_expression(*dest)?;
                 stmts.extend(dest_infos.stmts);
 
-                if let ir::Type::LValue(ty) = dest_infos.ty {
-                    if *ty == assign_infos.ty {
+                if let ir::Type::LValue(ty) = dest_infos.value.ty.clone() {
+                    if *ty == assign_infos.value.ty {
                         stmts.push(ir::Statement::LValueSet {
                             lvalue: dest_infos.value,
-                            rvalue: assign_infos.value,
+                            rvalue: assign_infos.value.clone(),
                         });
 
                         Ok(ExprInfos {
                             stmts: stmts,
                             value: assign_infos.value,
-                            ty: *ty,
                         })
                     } else {
                         Err(SyntaxError {
@@ -410,18 +400,17 @@ impl IRBuilder {
                 let index_infos = self.lvalue_to_rvalue(index_infos);
                 stmts.extend(index_infos.stmts);
 
-                if let ir::Type::Array(ty) = array_infos.ty {
-                    if let ir::Type::Int = index_infos.ty {
-                        let val = self.new_temp();
+                if let ir::Type::Array(ty) = array_infos.value.ty.clone() {
+                    if let ir::Type::Int = index_infos.value.ty {
+                        let id = self.new_temp();
                         stmts.push(ir::Statement::Assign {
-                            dest: val,
+                            dest: id,
                             expr: ir::Expr::Subscript(array_infos.value, index_infos.value),
                         });
 
                         Ok(ExprInfos {
                             stmts: stmts,
-                            value: val,
-                            ty: *ty
+                            value: ir::Value { id: id, ty: *ty },
                         })
                     } else {
                         Err(SyntaxError {
@@ -447,18 +436,17 @@ impl IRBuilder {
                 let rhs_infos = self.lvalue_to_rvalue(rhs_infos);
                 stmts.extend(rhs_infos.stmts);
 
-                if let Some((op, ty)) = tyck::binop_tyck(opcode, &lhs_infos.ty, &rhs_infos.ty) {
-                    let val = self.new_temp();
+                if let Some((op, ty)) = tyck::binop_tyck(opcode, &lhs_infos.value.ty, &rhs_infos.value.ty) {
+                    let id = self.new_temp();
 
                     stmts.push(ir::Statement::Assign {
-                        dest: val,
+                        dest: id,
                         expr: ir::Expr::BinOp(op, lhs_infos.value, rhs_infos.value),
                     });
 
                     Ok(ExprInfos {
                         stmts: stmts,
-                        value: val,
-                        ty: ty,
+                        value: ir::Value { id: id, ty: ty },
                     })
 
                 } else {
@@ -475,18 +463,17 @@ impl IRBuilder {
                 let sub_infos = self.lvalue_to_rvalue(sub_infos);
                 stmts.extend(sub_infos.stmts);
 
-                if let Some((op, ty)) = tyck::unop_tyck(opcode, &sub_infos.ty) {
-                    let val = self.new_temp();
+                if let Some((op, ty)) = tyck::unop_tyck(opcode, &sub_infos.value.ty) {
+                    let id = self.new_temp();
 
                     stmts.push(ir::Statement::Assign {
-                        dest: val,
+                        dest: id,
                         expr: ir::Expr::UnOp(op, sub_infos.value),
                     });
 
                     Ok(ExprInfos {
                         stmts: stmts,
-                        value: val,
-                        ty: ty,
+                        value: ir::Value { id: id, ty: ty },
                     })
                 } else {
                     Err(SyntaxError {
@@ -507,11 +494,11 @@ impl IRBuilder {
                     let param_infos = self.build_expression(param)?;
                     let param_infos = self.lvalue_to_rvalue(param_infos);
                     stmts.extend(param_infos.stmts);
-                    provided_param_types.push(param_infos.ty);
+                    provided_param_types.push(param_infos.value.ty.clone());
                     param_values.push(param_infos.value);
                 }
 
-                if let ir::Type::Function(ret, param_types) = func_infos.ty {
+                if let ir::Type::Function(ret, param_types) = func_infos.value.ty.clone() {
                     if param_types != provided_param_types {
                         return Err(SyntaxError {
                             msg: format!("Mismatching types in function call."),
@@ -519,16 +506,15 @@ impl IRBuilder {
                         })
                     }
 
-                    let val = self.new_temp();
+                    let id = self.new_temp();
                     stmts.push(ir::Statement::Assign {
-                        dest: val,
+                        dest: id,
                         expr: ir::Expr::FuncCall(func_infos.value, param_values),
                     });
 
                     Ok(ExprInfos {
                         stmts: stmts,
-                        value: val,
-                        ty: *ret
+                        value: ir::Value { id: id, ty: *ret },
                     })
 
                 } else {
@@ -552,19 +538,18 @@ impl IRBuilder {
                     })
                 };
 
-                let val = self.new_temp();
+                let temp_id = self.new_temp();
 
                 Ok(ExprInfos {
                     stmts: vec![ir::Statement::Assign {
-                        dest: val,
+                        dest: temp_id,
                         expr: ir::Expr::LoadVar(id),
                     }],
-                    value: val,
-                    ty: ir::Type::LValue(Box::new(ty.clone())),
+                    value: ir::Value { id: temp_id, ty: ir::Type::LValue(Box::new(ty.clone())) },
                 })
             },
             ast::Expression::Literal(literal) => {
-                let val = self.new_temp();
+                let id = self.new_temp();
                 let ty = match &literal {
                     &ast::Literal::Int(_) => ir::Type::Int,
                     &ast::Literal::Double(_) => ir::Type::Double,
@@ -573,11 +558,10 @@ impl IRBuilder {
 
                 Ok(ExprInfos {
                     stmts: vec![ir::Statement::Assign {
-                        dest: val,
+                        dest: id,
                         expr: ir::Expr::Literal(literal),
                     }],
-                    value: val,
-                    ty: ty,
+                    value: ir::Value { id: id, ty: ty },
                 })
             },
         }
@@ -606,5 +590,4 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
 struct ExprInfos {
     stmts: Vec<ir::Statement>,
     value: ir::Value,
-    ty: ir::Type,
 }

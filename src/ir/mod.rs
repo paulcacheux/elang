@@ -45,7 +45,6 @@ pub enum Statement {
     },
     VarDecl {
         name: String,
-        ty: Type,
         value: Value,
     },
     LValueSet {
@@ -53,7 +52,7 @@ pub enum Statement {
         rvalue: Value,
     },
     Assign {
-        dest: Value,
+        dest: usize,
         expr: Expr,
     }
 }
@@ -110,8 +109,11 @@ pub enum UnOpCode {
     BoolLogicalNot,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Value (usize);
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Value {
+    pub id: usize,
+    pub ty: Type,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
