@@ -31,6 +31,11 @@ fn test_bool(b: bool) -> bool {
     return !(!b);
 }
 
+fn test_ptr(ptr: *int) -> int {
+    *ptr = 12;
+    return *(&(*ptr));
+}
+
 fn main() {
     print neg_square(2.0 * 6.3);
 }
