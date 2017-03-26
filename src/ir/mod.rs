@@ -107,6 +107,8 @@ pub enum UnOpCode {
     IntMinus,
     DoubleMinus,
     BoolLogicalNot,
+    AddressOf,
+    PtrDeref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

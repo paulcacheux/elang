@@ -134,7 +134,7 @@ LogAndExpr: Spanned<Expression> = {
 EqExpr = Tier<EqOp, CompExpr>;
 CompExpr = Tier<CompOp, SumExpr>;
 SumExpr = Tier<SumOp, FactorExpr>;
-FactorExpr = Tier<FactorOp, SubscriptOrCallExpr>;
+FactorExpr = Tier<FactorOp, UnOpExpr>;
 
 EqOp: BinOpCode = {
     "==" => BinOpCode::Equal,
@@ -169,6 +169,16 @@ Tier<Op, NextTier>: Spanned<Expression> = {
     NextTier
 };
 
+UnOpExpr: Spanned<Expression> = {
+    <l:@L> <op:UnOp> <expr:SubscriptOrCallExpr> <r:@R> => {
+        Spanned::new(
+            Expression::UnOp(op, Box::new(expr)),
+            Span(l, r)
+        )
+    },
+    SubscriptOrCallExpr
+};
+
 SubscriptOrCallExpr: Spanned<Expression> = {
     <l:@L> <lhs:Spanned<Term>> "[" <rhs:Expr> "]" <r:@R> =>
         Spanned::new(
@@ -189,12 +199,13 @@ Term: Expression = {
     BoolLiteral => Expression::Literal(Literal::Bool(<>)),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
-    <op:UnOp> <expr:Spanned<Term>> => Expression::UnOp(op, Box::new(expr)),
 };
 
 UnOp: UnOpCode = {
     "-" => UnOpCode::Minus,
     "!" => UnOpCode::LogicalNot,
+    "&" => UnOpCode::AddressOf,
+    "*" => UnOpCode::Deref,
 };
 
 Type: ParseType = {
@@ -254,6 +265,7 @@ extern {
         "==" => lexer::Token::EqualEqual,
         "=" => lexer::Token::Equal,
         "!=" => lexer::Token::BangEqual,
+        "&" => lexer::Token::Amp,
         "&&" => lexer::Token::AmpAmp,
         "||" => lexer::Token::PipePipe,
         IntLiteral => lexer::Token::IntLit(<i64>),

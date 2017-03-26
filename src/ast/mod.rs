@@ -93,6 +93,8 @@ pub enum BinOpCode {
 pub enum UnOpCode {
     Minus,
     LogicalNot,
+    AddressOf,
+    Deref,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

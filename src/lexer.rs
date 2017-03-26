@@ -41,6 +41,7 @@ pub enum Token {
     EqualEqual,
     Equal,
     BangEqual,
+    Amp,
     AmpAmp,
     PipePipe,
     IntLit(i64),
@@ -136,15 +137,10 @@ impl<'input> Iterator for Lexer<'input> {
                 }))
             },
             Some((i, '&')) => {
-                if let Some(&(_, '&')) = self.chars.peek() {
-                    self.chars.next();
-                    Some(Ok((i, Token::AmpAmp, i+2)))
-                } else {
-                    Some(Err(LexicalError {
-                        msg: String::from("Unexpected '&', expected '&&'."),
-                        pos: i
-                    }))
-                }
+                Some(Ok(match self.if_next('&', Token::AmpAmp, Token::Amp) {
+                    Ok(tok) => (i, tok, i+2),
+                    Err(tok) => (i, tok, i+1),
+                }))
             },
             Some((i, '|')) => {
                 if let Some(&(_, '|')) = self.chars.peek() {
