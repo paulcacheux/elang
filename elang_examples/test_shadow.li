@@ -1,6 +1,6 @@
 fn main() -> int {
     let x = 0;
-    let x = 13;
+
     while true {
         let x = 12;
     }
