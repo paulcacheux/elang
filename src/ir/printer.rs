@@ -41,9 +41,7 @@ fn print_basic_block(bb: &BasicBlock) {
         print_stmt(stmt);
     }
 
-    if let Some(ref terminator) = bb.terminator {
-        print_terminator(terminator);
-    }
+    print_terminator(&bb.terminator);
 }
 
 fn print_stmt(stmt: &Statement) {
@@ -116,16 +114,19 @@ fn print_expr(expr: &Expression) {
 
 fn print_terminator(term: &Terminator) {
     match *term {
-        Terminator::Jmp(id) => println!("\tjmp #bb{}", id.0),
-        Terminator::Jz(ref val, id) => {
-            print!("\tjz ");
+        Terminator::Br(id) => println!("\tbr #bb{};", id.0),
+        Terminator::BrCond(ref val, idt, idf) => {
+            print!("\tbr_cond ");
             print_value(val);
-            println!(", #bb{};", id.0);
+            println!(", #bb{}, #bb{};", idt.0, idf.0);
         }
         Terminator::Ret(ref val) => {
             print!("\tret ");
             print_value(val);
             println!(";");
+        }
+        Terminator::Panic => {
+            println!("\tpanic;");
         }
     }
 }

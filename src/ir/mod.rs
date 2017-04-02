@@ -36,14 +36,15 @@ pub struct LocalVar {
 pub struct BasicBlock {
     id: BasicBlockId,
     stmts: Vec<Statement>,
-    terminator: Option<Terminator>,
+    terminator: Terminator,
 }
 
 #[derive(Debug, Clone)]
 pub enum Terminator {
-    Jmp(BasicBlockId),
-    Jz(Value, BasicBlockId),
+    Br(BasicBlockId),
+    BrCond(Value, BasicBlockId, BasicBlockId), // (true, false)
     Ret(Value),
+    Panic,
 }
 
 #[derive(Debug, Clone)]

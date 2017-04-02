@@ -174,11 +174,11 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
         },
         ast::Statement::Loop { stmt } => {
             let continue_id = fb.bb_counter;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             let stmt_index = fb.current_bb_index;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             let break_id = fb.bb_counter;
-            fb.terminate_current(Some(ir::Terminator::Jmp(ir::BasicBlockId(continue_id))));
+            fb.terminate_current(TempTerminator::Jmp(ir::BasicBlockId(continue_id)));
 
             fb.current_bb_index = stmt_index;
             let old_loop_infos = fb.current_loop_info.clone();
@@ -191,13 +191,13 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
         },
         ast::Statement::While { cond, stmt } => {
             let continue_id = fb.bb_counter;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             let cond_index = fb.current_bb_index;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             let stmt_index = fb.current_bb_index;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             let break_id = fb.bb_counter;
-            fb.terminate_current(Some(ir::Terminator::Jmp(ir::BasicBlockId(continue_id))));
+            fb.terminate_current(TempTerminator::Jmp(ir::BasicBlockId(continue_id)));
 
             fb.symbol_table.start_local_scope();
             fb.current_bb_index = cond_index;
@@ -210,7 +210,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                 })
             }
 
-            fb.change_terminator(Some(ir::Terminator::Jz(cond_value, ir::BasicBlockId(break_id))));
+            fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(break_id)));
 
             fb.current_bb_index = stmt_index;
             let old_loop_infos = fb.current_loop_info.clone();
@@ -228,7 +228,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             fb.symbol_table.start_local_scope();
             for branch in branches {
-                fb.terminate_current(None);
+                fb.terminate_current(TempTerminator::Fallthrough);
                 let cond_value = build_expression(fb, branch.0)?;
 
                 if cond_value.ty != ir::Type::Bool {
@@ -239,33 +239,33 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                 }
 
                 let cond_index = fb.current_bb_index;
-                fb.terminate_current(None);
+                fb.terminate_current(TempTerminator::Fallthrough);
 
                 build_compound_statement(fb, branch.1)?;
                 let else_index = fb.current_bb_index;
                 finalizer_indexes.push(else_index);
-                fb.terminate_current(None);
+                fb.terminate_current(TempTerminator::Fallthrough);
                 let else_id = fb.bb_counter;
 
                 fb.current_bb_index = cond_index;
-                fb.change_terminator(Some(ir::Terminator::Jz(cond_value, ir::BasicBlockId(else_id))));
+                fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(else_id)));
 
                 fb.current_bb_index = else_index;
             }
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
 
             if let Some(stmt) = else_branch {
                 build_compound_statement(fb, stmt)?;
             }
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
             finalizer_indexes.push(fb.current_bb_index);
 
             let end_index = fb.bb_counter;
-            fb.terminate_current(None);
+            fb.terminate_current(TempTerminator::Fallthrough);
 
             for index in finalizer_indexes {
                 fb.current_bb_index = index;
-                fb.change_terminator(Some(ir::Terminator::Jmp(ir::BasicBlockId(end_index))));
+                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(end_index)));
             }
 
             fb.symbol_table.end_local_scope();
@@ -275,7 +275,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
         },
         ast::Statement::Break => {
             if let Some((_, id)) = fb.current_loop_info.clone() {
-                fb.terminate_current(Some(ir::Terminator::Jmp(id)));
+                fb.terminate_current(TempTerminator::Jmp(id));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -286,7 +286,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
         }
         ast::Statement::Continue => {
             if let Some((id, _)) = fb.current_loop_info.clone() {
-                fb.terminate_current(Some(ir::Terminator::Jmp(id)));
+                fb.terminate_current(TempTerminator::Jmp(id));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -307,7 +307,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             };
 
             if value.ty == *fb.ty.return_ty {
-                fb.terminate_current(Some(ir::Terminator::Ret(value)));
+                fb.terminate_current(TempTerminator::Ret(value));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -510,6 +510,21 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TempBasicBlock {
+    id: ir::BasicBlockId,
+    stmts: Vec<ir::Statement>,
+    terminator: TempTerminator,
+}
+
+#[derive(Debug, Clone)]
+pub enum TempTerminator {
+    Jmp(ir::BasicBlockId),
+    Jz(ir::Value, ir::BasicBlockId),
+    Ret(ir::Value),
+    Fallthrough,
+}
+
 #[derive(Debug)]
 struct FunctionBuilder<'a> {
     name: String,
@@ -517,7 +532,7 @@ struct FunctionBuilder<'a> {
     symbol_table: &'a mut SymbolTable,
     locals: Vec<ir::LocalVar>,
     local_counter: usize,
-    basic_blocks: Vec<ir::BasicBlock>,
+    basic_blocks: Vec<TempBasicBlock>,
     current_bb_index: usize,
     bb_counter: usize,
     current_temp_id: usize,
@@ -532,7 +547,7 @@ impl<'a> FunctionBuilder<'a> {
             symbol_table: st,
             locals: Vec::new(),
             local_counter: 0,
-            basic_blocks: vec![ir::BasicBlock { id: ir::BasicBlockId(0), stmts: Vec::new(), terminator: None }],
+            basic_blocks: vec![TempBasicBlock { id: ir::BasicBlockId(0), stmts: Vec::new(), terminator: TempTerminator::Fallthrough }],
             current_bb_index: 0,
             bb_counter: 1,
             current_temp_id: 0,
@@ -540,12 +555,48 @@ impl<'a> FunctionBuilder<'a> {
         }
     }
 
-    fn to_function(self) -> ir::Declaration {
+    fn to_function(mut self) -> ir::Declaration {
+        if *self.ty.return_ty == ir::Type::Unit {
+            self.cursor_to_end();
+            let value = ir::Value { id: self.new_temp_id(), ty: ir::Type::Unit };
+            self.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
+            self.terminate_current(TempTerminator::Ret(value));
+        }
+
+        let mut bbs = Vec::with_capacity(self.basic_blocks.len());
+
+        for i in 0..self.basic_blocks.len() {
+            let term = match self.basic_blocks[i].terminator.clone() {
+                TempTerminator::Jmp(id) => ir::Terminator::Br(id),
+                TempTerminator::Ret(value) => ir::Terminator::Ret(value),
+                TempTerminator::Fallthrough => {
+                    if i + 1 == self.basic_blocks.len() {
+                        ir::Terminator::Panic
+                    } else {
+                        ir::Terminator::Br(self.basic_blocks[i + 1].id)
+                    }
+                },
+                TempTerminator::Jz(value, id) => {
+                    if i + 1 == self.basic_blocks.len() {
+                        ir::Terminator::Panic
+                    } else {
+                        ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
+                    }
+                }
+            };
+
+            bbs.push(ir::BasicBlock {
+                id: self.basic_blocks[i].id,
+                stmts: self.basic_blocks[i].stmts.clone(),
+                terminator: term,
+            })
+        }
+
         ir::Declaration::Function {
             name: self.name,
             ty: self.ty,
             locals: self.locals,
-            bbs: self.basic_blocks,
+            bbs: bbs,
         }
     }
 
@@ -578,16 +629,16 @@ impl<'a> FunctionBuilder<'a> {
         self.basic_blocks[self.current_bb_index].stmts.push(stmt);
     }
 
-    fn change_terminator(&mut self, terminator: Option<ir::Terminator>) {
+    fn change_terminator(&mut self, terminator: TempTerminator) {
         self.basic_blocks[self.current_bb_index].terminator = terminator;
     }
 
-    fn terminate_current(&mut self, terminator: Option<ir::Terminator>) {
+    fn terminate_current(&mut self, terminator: TempTerminator) {
         self.change_terminator(terminator);
-        self.basic_blocks.insert(self.current_bb_index + 1, ir::BasicBlock {
+        self.basic_blocks.insert(self.current_bb_index + 1, TempBasicBlock {
             id: ir::BasicBlockId(self.bb_counter),
             stmts: Vec::new(),
-            terminator: None
+            terminator: TempTerminator::Fallthrough
         });
         self.current_bb_index += 1;
         self.bb_counter += 1;
