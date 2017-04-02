@@ -201,7 +201,15 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             fb.symbol_table.start_local_scope();
             fb.current_bb_index = cond_index;
-            let cond_value = build_expression(fb, cond)?; //TODO tyck
+            let cond_value = build_expression(fb, cond)?;
+
+            if cond_value.ty != ir::Type::Bool {
+                return Err(SyntaxError {
+                    msg: format!("Condititoon type must be bool."),
+                    span: stmt.span,
+                })
+            }
+
             fb.change_terminator(Some(ir::Terminator::Jz(cond_value, ir::BasicBlockId(break_id))));
 
             fb.current_bb_index = stmt_index;
@@ -222,6 +230,14 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             for branch in branches {
                 fb.terminate_current(None);
                 let cond_value = build_expression(fb, branch.0)?;
+
+                if cond_value.ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("Condititoon type must be bool."),
+                        span: stmt.span,
+                    })
+                }
+
                 let cond_index = fb.current_bb_index;
                 fb.terminate_current(None);
 
