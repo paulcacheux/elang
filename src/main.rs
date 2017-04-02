@@ -57,5 +57,5 @@ fn main() {
     };
 
     println!("SUCCESS");
-    println!("{:#?}", tu);
+    ir::printer::print_ir(&tu);
 }

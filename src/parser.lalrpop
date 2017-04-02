@@ -26,7 +26,6 @@ ParamDecl: (String, Spanned<ParseType>) = {
 };
 
 Statement: Spanned<Statement> = {
-    Spanned<CompoundStmt>,
     Spanned<LetStmt>,
     Spanned<LoopStmt>,
     Spanned<WhileStmt>,
@@ -35,11 +34,17 @@ Statement: Spanned<Statement> = {
     Spanned<ContinueStmt>,
     Spanned<ReturnStmt>,
     Spanned<ExprStmt>,
-    Spanned<PrintStmt>,
+    <Spanned<CompoundStmt>> => {
+        let span = <>.span;
+        Spanned::new(
+            Statement::Compound(<>),
+            span,
+        )
+    }
 };
 
-CompoundStmt: Statement = {
-    "{" <Statement*> "}" => Statement::Compound { stmts: <> }
+CompoundStmt: CompoundStatement = {
+    "{" <Statement*> "}" => CompoundStatement(<>)
 };
 
 LetStmt: Statement = {
@@ -51,31 +56,31 @@ LetStmt: Statement = {
 };
 
 LoopStmt: Statement = {
-    "loop" <Spanned<CompoundStmt>> => Statement::Loop { stmt: Box::new(<>) }
+    "loop" <Spanned<CompoundStmt>> => Statement::Loop { stmt: <> }
 };
 
 WhileStmt: Statement = {
     "while" <expr:Expr> <stmt:Spanned<CompoundStmt>> => Statement::While {
         cond: expr,
-        stmt: Box::new(stmt)
+        stmt: stmt
     }
 };
 
 IfStmt: Statement = {
     "if" <if_cond:Expr> <if_stmt:Spanned<CompoundStmt>> <elseifs:ElseIfPart*> <else_part:ElsePart?> => {
         Statement::If {
-            if_branch: (if_cond, Box::new(if_stmt)),
+            if_branch: (if_cond, if_stmt),
             elseif_branches: elseifs,
-            else_branch: else_part.map(Box::new),
+            else_branch: else_part,
         }
     }
 };
 
-ElseIfPart: (Spanned<Expression>, Spanned<Statement>) = {
+ElseIfPart: (Spanned<Expression>, Spanned<CompoundStatement>) = {
     "else" "if" <Expr> <Spanned<CompoundStmt>>
 };
 
-ElsePart: Spanned<Statement> = {
+ElsePart: Spanned<CompoundStatement> = {
     "else" <Spanned<CompoundStmt>>
 };
 
@@ -88,15 +93,11 @@ ContinueStmt: Statement = {
 };
 
 ReturnStmt: Statement = {
-    "return" <Expr> ";" => Statement::Return { expr: <> }
+    "return" <Expr?> ";" => Statement::Return { expr: <> }
 };
 
 ExprStmt: Statement = {
     <Expr> ";" => Statement::Expression { expr: <> }
-};
-
-PrintStmt: Statement = {
-    "print" <Expr> ";" => Statement::Print { expr: <> }
 };
 
 Expr = AssignExpr;
@@ -240,7 +241,6 @@ extern {
         "return" => lexer::Token::ReturnKeyword,
         "break" => lexer::Token::BreakKeyword,
         "continue" => lexer::Token::ContinueKeyword,
-        "print" => lexer::Token::PrintKeyword,
         "(" => lexer::Token::OpenParen,
         ")" => lexer::Token::CloseParen,
         "[" => lexer::Token::OpenSquare,

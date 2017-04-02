@@ -14,43 +14,41 @@ pub enum Declaration {
         name: String,
         params: Vec<(String, Spanned<ParseType>)>,
         return_ty: Spanned<ParseType>,
-        stmt: Spanned<Statement>,
+        stmt: Spanned<CompoundStatement>,
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct CompoundStatement(pub Vec<Spanned<Statement>>);
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Compound {
-        stmts: Vec<Spanned<Statement>>,
-    },
+    Compound(Spanned<CompoundStatement>),
     Let {
         name: String,
         ty: Option<Spanned<ParseType>>,
         expr: Spanned<Expression>,
     },
     Loop {
-        stmt: Box<Spanned<Statement>>,
+        stmt: Spanned<CompoundStatement>,
     },
     While {
         cond: Spanned<Expression>,
-        stmt: Box<Spanned<Statement>>,
+        stmt: Spanned<CompoundStatement>,
     },
     If {
-        if_branch: (Spanned<Expression>, Box<Spanned<Statement>>),
-        elseif_branches: Vec<(Spanned<Expression>, Spanned<Statement>)>,
-        else_branch: Option<Box<Spanned<Statement>>>,
+        if_branch: (Spanned<Expression>, Spanned<CompoundStatement>),
+        elseif_branches: Vec<(Spanned<Expression>, Spanned<CompoundStatement>)>,
+        else_branch: Option<Spanned<CompoundStatement>>,
     },
     Break,
     Continue,
     Return {
-        expr: Spanned<Expression>,
+        expr: Option<Spanned<Expression>>,
     },
     Expression {
         expr: Spanned<Expression>,
     },
-    Print {
-        expr: Spanned<Expression>,
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +68,7 @@ pub enum Literal {
     Int(i64),
     Double(f64),
     Bool(bool),
+    Unit
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

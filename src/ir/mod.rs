@@ -1,71 +1,75 @@
 use ast;
+use std::fmt;
+use itertools::Itertools;
 
 pub mod builder;
+pub mod printer;
 mod tyck;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TranslationUnit {
     pub declarations: Vec<Declaration>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Declaration {
     Function {
         name: String,
-        ty: Type,
-        params: Vec<String>,
-        stmt: Statement,
+        ty: FunctionType,
+        locals: Vec<LocalVar>,
+        bbs: Vec<BasicBlock>,
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
+pub struct LocalVar {
+    id: LocalVarId,
+    ty: Type,
+    param_index: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BasicBlock {
+    id: BasicBlockId,
+    stmts: Vec<Statement>,
+    terminator: Option<Terminator>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Terminator {
+    Jmp(BasicBlockId),
+    Jz(Value, BasicBlockId),
+    Ret(Value),
+}
+
+#[derive(Debug, Clone)]
 pub enum Statement {
-    Compound {
-        stmts: Vec<Statement>,
-    },
-    Loop {
-        stmt: Box<Statement>,
-    },
-    While {
-        cond: Value,
-        stmt: Box<Statement>,
-    },
-    If {
-        cond: Value,
-        if_stmt: Box<Statement>,
-        else_stmt: Option<Box<Statement>>,
-    },
-    Break,
-    Continue,
-    Return {
-        value: Value,
-    },
-    Print {
-        value: Value,
-    },
-    VarDecl {
-        name: String,
-        value: Value,
-    },
-    LValueSet {
-        lvalue: Value,
-        rvalue: Value,
-    },
-    Assign {
-        dest: usize,
-        expr: Expr,
-    }
+    LValueSet(Value, Value),
+    Assign(Value, Expression),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
-    LoadVar(String),
-    LValueToRValue(Value),
+#[derive(Debug, Clone)]
+pub enum Expression {
+    LocalVarLoad(LocalVarId),
+    GlobalLoad(String),
+    LValueLoad(Value),
     BinOp(BinOpCode, Value, Value),
     UnOp(UnOpCode, Value),
-    Subscript(Value, Value),
+    ReadArray(Value, Value),
     FuncCall(Value, Vec<Value>),
     Literal(ast::Literal),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BasicBlockId(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LocalVarId(usize);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Value {
+    id: usize,
+    ty: Type,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,12 +116,6 @@ pub enum UnOpCode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Value {
-    pub id: usize,
-    pub ty: Type,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Unit,
     Bool,
@@ -126,5 +124,32 @@ pub enum Type {
     LValue(Box<Type>),
     Array(Box<Type>),
     Ptr(Box<Type>),
-    Function(Box<Type>, Vec<Type>),
+    Function(FunctionType),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FunctionType {
+    return_ty: Box<Type>,
+    params_ty: Vec<Type>,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Type::Unit => write!(f, "()"),
+            Type::Bool => write!(f, "bool"),
+            Type::Int => write!(f, "int"),
+            Type::Double => write!(f, "double"),
+            Type::LValue(ref sub) => write!(f, "&{}", *sub),
+            Type::Array(ref sub) => write!(f, "[{}]", *sub),
+            Type::Ptr(ref sub) => write!(f, "*{}", *sub),
+            Type::Function(ref func) => write!(f, "{}", func)
+        }
+    }
+}
+
+impl fmt::Display for FunctionType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}) -> {}", self.params_ty.iter().join(", "), *self.return_ty)
+    }
 }

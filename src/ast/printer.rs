@@ -40,10 +40,20 @@ impl ASTPrinter {
                     self.print_tab();
                     println!("ParamDecl '{}':'{}'", param.0, param.1.inner);
                 }
-                self.print_statement(stmt);
+                self.print_compound_statement(stmt);
                 self.0 -= 1;
             },
         }
+    }
+
+    fn print_compound_statement(&mut self, cstmt: &Spanned<CompoundStatement>) {
+        self.print_tab();
+        println!("CompoundStmt");
+        self.0 += 1;
+        for stmt in &cstmt.inner.0 {
+            self.print_statement(stmt);
+        }
+        self.0 -= 1;
     }
 
     fn print_statement(&mut self, stmt: &Spanned<Statement>) {
@@ -52,12 +62,9 @@ impl ASTPrinter {
 
         use self::Statement::*;
         match stmt.inner {
-            Compound { ref stmts } => {
-                println!("CompoundStmt");
+            Compound(ref cstmt) => {
                 self.0 += 1;
-                for stmt in stmts {
-                    self.print_statement(stmt);
-                }
+                self.print_compound_statement(cstmt);
                 self.0 -= 1;
             },
             Let { ref name, ref ty, ref expr } => {
@@ -73,14 +80,14 @@ impl ASTPrinter {
             Loop { ref stmt } => {
                 println!("LoopStmt");
                 self.0 += 1;
-                self.print_statement(stmt);
+                self.print_compound_statement(stmt);
                 self.0 -= 1;
             },
             While { ref cond, ref stmt } => {
                 println!("WhileStmt");
                 self.0 += 1;
                 self.print_expression(cond);
-                self.print_statement(stmt);
+                self.print_compound_statement(stmt);
                 self.0 -= 1;
             },
             If { ref if_branch, ref elseif_branches, ref else_branch } => {
@@ -91,7 +98,7 @@ impl ASTPrinter {
                 println!("IfBranch");
                 self.0 += 1;
                 self.print_expression(&if_branch.0);
-                self.print_statement(&if_branch.1);
+                self.print_compound_statement(&if_branch.1);
                 self.0 -= 1;
 
                 for &(ref cond, ref stmt) in elseif_branches {
@@ -99,7 +106,7 @@ impl ASTPrinter {
                     println!("ElseIfBranch");
                     self.0 += 1;
                     self.print_expression(cond);
-                    self.print_statement(stmt);
+                    self.print_compound_statement(stmt);
                     self.0 -= 1;
                 }
 
@@ -107,7 +114,7 @@ impl ASTPrinter {
                     self.print_tab();
                     println!("ElseBranch");
                     self.0 += 1;
-                    self.print_statement(stmt);
+                    self.print_compound_statement(stmt);
                     self.0 -= 1;
                 }
 
@@ -122,7 +129,9 @@ impl ASTPrinter {
             Return { ref expr } => {
                 println!("ReturnStmt");
                 self.0 += 1;
-                self.print_expression(expr);
+                if let Some(ref expr) = *expr {
+                    self.print_expression(expr);
+                }
                 self.0 -= 1;
             },
             Expression { ref expr } => {
@@ -131,12 +140,6 @@ impl ASTPrinter {
                 self.print_expression(expr);
                 self.0 -= 1;
             },
-            Print { ref expr } => {
-                println!("PrintStmt");
-                self.0 += 1;
-                self.print_expression(expr);
-                self.0 -= 1;
-            }
         }
     }
 
@@ -197,6 +200,7 @@ impl ASTPrinter {
                     Literal::Int(val) => println!("IntLit '{}'", val),
                     Literal::Double(val) => println!("DoubleLit '{}'", val),
                     Literal::Bool(val) => println!("BoolLit '{:?}'", val),
+                    Literal::Unit => println!("UnitLit"),
                 }
             }
         }

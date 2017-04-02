@@ -1,0 +1,20 @@
+fn fib(i: int) -> int {
+    if i <= 1 {
+        return i;
+    } else {
+        let a = fib(i - 1);
+        let b = fib(i - 2);
+        return a + b;
+    }
+}
+
+fn print(_:int) {}
+
+fn main() {
+    let i = 0;
+    let max = 50;
+    while i < max {
+        print(fib(i));
+        i = i + 1;
+    }
+}

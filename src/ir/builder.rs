@@ -1,570 +1,455 @@
 use std::collections::HashMap;
-
 use ir;
-use super::tyck;
 use ast;
 use ast::{Span, Spanned};
+use ir::tyck;
 
-pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::TranslationUnit, SyntaxError> {
-    let mut ir_builder = IRBuilder::new();
 
-    ir_builder.sym_table.new_scope();
-    let mut declarations = Vec::with_capacity(tu.declarations.len());
-    for decl in tu.declarations {
-        declarations.push(ir_builder.build_declaration(decl)?);
-    }
-    ir_builder.sym_table.end_scope();
-
-    Ok(ir::TranslationUnit {
-        declarations: declarations,
-    })
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct SyntaxError {
     pub msg: String,
     pub span: Span,
 }
 
-struct SymbolTable {
-    scopes: Vec<HashMap<String, ir::Type>>,
+#[derive(Debug, Clone)]
+pub struct SymbolTable {
+    globals: HashMap<String, ir::Type>,
+    locals: Vec<HashMap<String, (ir::LocalVarId, ir::Type)>>,
 }
 
 impl SymbolTable {
-    fn new_scope(&mut self) {
-        self.scopes.push(HashMap::new());
+    fn new() -> Self {
+        SymbolTable {
+            globals: HashMap::new(),
+            locals: Vec::new(),
+        }
     }
 
-    fn end_scope(&mut self) {
-        self.scopes.pop();
+    fn start_local_scope(&mut self) {
+        self.locals.push(HashMap::new());
     }
 
-    fn insert(&mut self, name: String, ty: ir::Type) -> bool { // return false if already on scope
-        let scope = self.scopes.last_mut().unwrap();
-        scope.insert(name, ty).is_none()
+    fn end_local_scope(&mut self) {
+        self.locals.pop();
     }
 
-    fn get_ty(&self, name: &String) -> Option<ir::Type> {
-        for scope in self.scopes.iter().rev() {
-            if let Some(ty) = scope.get(name) {
-                return Some(ty.clone());
+    fn register_local(&mut self, name: String, ty: ir::Type, id: ir::LocalVarId) -> bool { // return false if already on scope
+        self.locals.last_mut().unwrap().insert(name, (id, ty)).is_none()
+    }
+
+    fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
+        self.globals.insert(name, ty).is_none()
+    }
+
+    fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
+        for scope in self.locals.iter().rev() {
+            if let Some(&(ref id, ref ty)) = scope.get(name) {
+                return Some((ir::Type::LValue(Box::new(ty.clone())), ir::Expression::LocalVarLoad(id.clone())));
             }
         }
-        None
-    }
-}
-
-struct IRBuilder {
-    sym_table: SymbolTable,
-    inside_loop: bool,
-    current_ret_ty: ir::Type,
-    temp_counter: usize,
-}
-
-impl IRBuilder {
-    fn new() -> Self {
-        IRBuilder {
-            sym_table: SymbolTable { scopes: Vec::new() },
-            inside_loop: false,
-            current_ret_ty: ir::Type::Unit,
-            temp_counter: 0,
+        if let Some(ty) = self.globals.get(name) {
+            Some((ty.clone(), ir::Expression::GlobalLoad(name.clone())))
+        } else {
+            None
         }
     }
+}
 
-    fn new_temp(&mut self) -> usize {
-        let temp = self.temp_counter;
-        self.temp_counter += 1;
-        temp
+pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::TranslationUnit, SyntaxError> {
+    let mut symbol_table = SymbolTable::new();
+
+    let mut declarations = Vec::with_capacity(tu.declarations.len());
+    for decl in tu.declarations {
+        declarations.push(build_declaration(decl, &mut symbol_table)?);
     }
 
-    fn build_declaration(&mut self, decl: Spanned<ast::Declaration>) -> Result<ir::Declaration, SyntaxError> {
-        match decl.inner {
-            ast::Declaration::Function { name, params, return_ty, stmt } => {
-                let mut param_names = Vec::with_capacity(params.len());
-                let mut param_types = Vec::with_capacity(params.len());
-                for (name, ty) in params {
-                    param_names.push(name);
-                    param_types.push(build_type(ty)?);
-                }
-                let ret_ty = build_type(return_ty)?;
-                let ty = ir::Type::Function(Box::new(ret_ty.clone()), param_types.clone());
+    Ok(ir::TranslationUnit {
+        declarations: declarations
+    })
+}
 
-                self.current_ret_ty = ret_ty;
-                if !self.sym_table.insert(name.clone(), ty.clone()) {
+fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolTable) -> Result<ir::Declaration, SyntaxError> {
+    match decl.inner {
+        ast::Declaration::Function { name, params, return_ty, stmt } => {
+            let return_ty = build_type(return_ty)?;
+
+            let mut param_names = Vec::with_capacity(params.len());
+            let mut param_types = Vec::with_capacity(params.len());
+            for (name, ty) in params {
+                param_names.push(name);
+                param_types.push(build_type(ty)?);
+            }
+
+            let ty = ir::FunctionType { return_ty: Box::new(return_ty), params_ty: param_types };
+
+            if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
+                return Err(SyntaxError {
+                    msg: format!("'{}' function is already defined.", name),
+                    span: decl.span,
+                })
+            }
+
+            let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
+            function_builder.symbol_table.start_local_scope();
+            for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
+                if !function_builder.register_param(name.clone(), ty, Some(index)) {
+                    return Err(SyntaxError {
+                        msg: format!("'{}' is already defined.", name),
+                        span: decl.span,
+                    })
+                }
+            }
+
+            build_compound_statement(&mut function_builder, stmt)?;
+            function_builder.symbol_table.end_local_scope();
+
+            Ok(function_builder.to_function())
+        }
+    }
+}
+
+fn build_compound_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::CompoundStatement>) -> Result<(), SyntaxError> {
+    fb.symbol_table.start_local_scope();
+    for s in stmt.inner.0 {
+        build_statement(fb, s)?;
+    }
+    fb.symbol_table.end_local_scope();
+    Ok(())
+}
+
+fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> Result<(), SyntaxError> {
+    match stmt.inner {
+        ast::Statement::Compound(c) => build_compound_statement(fb, c),
+        ast::Statement::Let { name, ty, expr } => {
+            let expr_value = build_expression(fb, expr)?;
+            let expr_value = build_lvalue_to_rvalue(fb, expr_value);
+
+            let ty = if let Some(ty) = ty {
+                build_type(ty)?
+            } else {
+                expr_value.ty.clone()
+            };
+
+            if ty == expr_value.ty {
+                if !fb.register_local_variable(name.clone(), ty.clone()) {
                     return Err(SyntaxError {
                         msg: format!("'{}' is already defined in this scope.", name),
                         span: stmt.span,
                     })
                 }
-                self.sym_table.new_scope();
-                for (name, ty) in param_names.iter().zip(param_types.iter()) {
-                    if !self.sym_table.insert(name.clone(), ty.clone()) {
-                        return Err(SyntaxError {
-                            msg: format!("'{}' is already defined as a parameter.", name),
-                            span: stmt.span,
-                        })
-                    }
-                }
-                self.sym_table.new_scope();
-                let stmts = self.build_statement(stmt)?;
-                self.sym_table.end_scope();
-                self.sym_table.end_scope();
 
-                Ok(ir::Declaration::Function {
-                    name: name,
-                    ty: ty,
-                    params: param_names,
-                    stmt: ir::Statement::Compound { stmts: stmts }
+                let (_, lval_expr) = fb.symbol_table.get_var(&name).unwrap(); //TODO optimize
+                let lvalue = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ty)) };
+                fb.add_statement(ir::Statement::Assign(lvalue.clone(), lval_expr));
+                fb.add_statement(ir::Statement::LValueSet(lvalue, expr_value));
+                Ok(())
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Mismatching assignment types."),
+                    span: stmt.span,
+                })
+            }
+        },
+        ast::Statement::Loop { stmt } => {
+            let continue_id = fb.bb_counter;
+            fb.terminate_current(None);
+            let stmt_index = fb.current_bb_index;
+            fb.terminate_current(None);
+            let break_id = fb.bb_counter;
+            fb.terminate_current(Some(ir::Terminator::Jmp(ir::BasicBlockId(continue_id))));
+
+            fb.current_bb_index = stmt_index;
+            let old_loop_infos = fb.current_loop_info.clone();
+            fb.current_loop_info = Some((ir::BasicBlockId(continue_id), ir::BasicBlockId(break_id)));
+            build_compound_statement(fb, stmt)?;
+            fb.current_loop_info = old_loop_infos;
+
+            fb.cursor_to_end();
+            Ok(())
+        },
+        ast::Statement::While { cond, stmt } => {
+            let continue_id = fb.bb_counter;
+            fb.terminate_current(None);
+            let cond_index = fb.current_bb_index;
+            fb.terminate_current(None);
+            let stmt_index = fb.current_bb_index;
+            fb.terminate_current(None);
+            let break_id = fb.bb_counter;
+            fb.terminate_current(Some(ir::Terminator::Jmp(ir::BasicBlockId(continue_id))));
+
+            fb.symbol_table.start_local_scope();
+            fb.current_bb_index = cond_index;
+            let cond_value = build_expression(fb, cond)?; //TODO tyck
+            fb.change_terminator(Some(ir::Terminator::Jz(cond_value, ir::BasicBlockId(break_id))));
+
+            fb.current_bb_index = stmt_index;
+            let old_loop_infos = fb.current_loop_info.clone();
+            fb.current_loop_info = Some((ir::BasicBlockId(continue_id), ir::BasicBlockId(break_id)));
+            build_compound_statement(fb, stmt)?;
+            fb.current_loop_info = old_loop_infos;
+
+            fb.symbol_table.end_local_scope();
+            fb.cursor_to_end();
+            Ok(())
+        },
+        ast::Statement::If { if_branch, elseif_branches, else_branch } => {
+            let branches = vec![if_branch].into_iter().chain(elseif_branches);
+            let mut finalizer_indexes = Vec::new();
+
+            fb.symbol_table.start_local_scope();
+            for branch in branches {
+                fb.terminate_current(None);
+                let cond_value = build_expression(fb, branch.0)?;
+                let cond_index = fb.current_bb_index;
+                fb.terminate_current(None);
+
+                build_compound_statement(fb, branch.1)?;
+                let else_index = fb.current_bb_index;
+                finalizer_indexes.push(else_index);
+                fb.terminate_current(None);
+                let else_id = fb.bb_counter;
+
+                fb.current_bb_index = cond_index;
+                fb.change_terminator(Some(ir::Terminator::Jz(cond_value, ir::BasicBlockId(else_id))));
+
+                fb.current_bb_index = else_index;
+            }
+            fb.terminate_current(None);
+
+            if let Some(stmt) = else_branch {
+                build_compound_statement(fb, stmt)?;
+            }
+            fb.terminate_current(None);
+            finalizer_indexes.push(fb.current_bb_index);
+
+            let end_index = fb.bb_counter;
+            fb.terminate_current(None);
+
+            for index in finalizer_indexes {
+                fb.current_bb_index = index;
+                fb.change_terminator(Some(ir::Terminator::Jmp(ir::BasicBlockId(end_index))));
+            }
+
+            fb.symbol_table.end_local_scope();
+
+            fb.cursor_to_end();
+            Ok(())
+        },
+        ast::Statement::Break => {
+            if let Some((_, id)) = fb.current_loop_info.clone() {
+                fb.terminate_current(Some(ir::Terminator::Jmp(id)));
+                Ok(())
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Break outside loop."),
+                    span: stmt.span,
                 })
             }
         }
-    }
-
-    fn build_statement(&mut self, stmt: Spanned<ast::Statement>) -> Result<Vec<ir::Statement>, SyntaxError> {
-        match stmt.inner {
-            ast::Statement::Compound { stmts } => {
-                let mut ir_stmts = Vec::new();
-                self.sym_table.new_scope();
-                for stmt in stmts {
-                    ir_stmts.extend(self.build_statement(stmt)?);
-                }
-                self.sym_table.end_scope();
-
-                Ok(vec![ir::Statement::Compound {
-                    stmts: ir_stmts
-                }])
-            },
-            ast::Statement::Let { name, ty, expr } => {
-                let expr_infos = self.build_expression(expr)?;
-                let expr_infos = self.lvalue_to_rvalue(expr_infos);
-                let mut stmts = expr_infos.stmts;
-
-                let ty = if let Some(set_ty) = ty {
-                    build_type(set_ty)?
-                } else {
-                    expr_infos.value.ty.clone()
-                };
-
-                if expr_infos.value.ty != ty {
-                    return Err(SyntaxError {
-                        msg: format!("Mismatching types in let."),
-                        span: stmt.span,
-                    })
-                }
-
-                if !self.sym_table.insert(name.clone(), ty.clone()) {
-                    return Err(SyntaxError {
-                        msg: format!("Error '{}' is already defined in this scope.", name),
-                        span: stmt.span,
-                    })
-                }
-
-                stmts.push(ir::Statement::VarDecl {
-                    name: name,
-                    value: expr_infos.value,
-                });
-
-                Ok(stmts)
+        ast::Statement::Continue => {
+            if let Some((id, _)) = fb.current_loop_info.clone() {
+                fb.terminate_current(Some(ir::Terminator::Jmp(id)));
+                Ok(())
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Continue outside loop."),
+                    span: stmt.span,
+                })
             }
-            ast::Statement::Loop { stmt } => {
-                let was_inside_loop = self.inside_loop;
-                self.inside_loop = true;
-                self.sym_table.new_scope();
-                let stmts = self.build_statement(*stmt)?;
-                self.inside_loop = was_inside_loop;
-                self.sym_table.end_scope();
-                Ok(vec![ir::Statement::Loop {
-                    stmt: Box::new(ir::Statement::Compound {
-                        stmts: stmts
-                    })
-                }])
-            },
-            ast::Statement::While { cond, stmt: while_stmt } => {
-                self.sym_table.new_scope();
-                let cond_infos = self.build_expression(cond)?;
-                let cond_infos = self.lvalue_to_rvalue(cond_infos);
-                let mut stmts = cond_infos.stmts;
+        }
+        ast::Statement::Return { expr } => {
+            let value = if let Some(expr) = expr {
+                let value = build_expression(fb, expr)?;
+                let value = build_lvalue_to_rvalue(fb, value);
+                value
+            } else {
+                let value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Unit };
+                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
+                value
+            };
 
-                if cond_infos.value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Expected 'bool' type in condition."),
-                        span: stmt.span
-                    })
-                }
-
-                let was_inside_loop = self.inside_loop;
-                self.inside_loop = true;
-                self.sym_table.new_scope();
-                let while_stmts = self.build_statement(*while_stmt)?;
-                self.inside_loop = was_inside_loop;
-                self.sym_table.end_scope();
-                self.sym_table.end_scope();
-
-                stmts.push(ir::Statement::While {
-                    cond: cond_infos.value,
-                    stmt: Box::new(ir::Statement::Compound {
-                        stmts: while_stmts
-                    })
-                });
-
-                Ok(vec![
-                    ir::Statement::Compound {
-                        stmts: stmts
-                    }
-                ])
-            },
-            ast::Statement::If { if_branch, elseif_branches, else_branch } => {
-                let mut stmts = Vec::new();
-                self.sym_table.new_scope();
-
-                let if_cond = self.build_expression(if_branch.0)?;
-                let if_cond = self.lvalue_to_rvalue(if_cond);
-                stmts.extend(if_cond.stmts);
-
-                if if_cond.value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Expected 'bool' type in condition."),
-                        span: stmt.span
-                    })
-                }
-
-                self.sym_table.new_scope();
-                let if_stmts = self.build_statement(*if_branch.1)?;
-                self.sym_table.end_scope();
-
-                self.sym_table.new_scope();
-                let mut else_stmt = if let Some(else_stmt) = else_branch {
-                    Some(Box::new(ir::Statement::Compound {
-                        stmts: self.build_statement(*else_stmt)?
-                    }))
-                } else {
-                    None
-                };
-                self.sym_table.end_scope();
-
-                for (cond, stmt) in elseif_branches.into_iter().rev() {
-                    self.sym_table.new_scope();
-                    let cond = self.build_expression(cond)?;
-                    let mut cond = self.lvalue_to_rvalue(cond);
-
-                    if cond.value.ty != ir::Type::Bool {
-                        return Err(SyntaxError {
-                            msg: format!("Expected 'bool' type in condition."),
-                            span: stmt.span
-                        })
-                    }
-
-                    cond.stmts.push(ir::Statement::If {
-                        cond: cond.value,
-                        if_stmt: Box::new(ir::Statement::Compound {
-                            stmts: self.build_statement(stmt)?
-                        }),
-                        else_stmt: else_stmt
-                    });
-
-                    else_stmt = Some(Box::new(ir::Statement::Compound {
-                        stmts: cond.stmts
-                    }));
-
-                    self.sym_table.end_scope();
-                }
-
-                self.sym_table.end_scope();
-
-                stmts.push(ir::Statement::If {
-                    cond: if_cond.value,
-                    if_stmt: Box::new(ir::Statement::Compound {
-                        stmts: if_stmts
-                    }),
-                    else_stmt: else_stmt
-                });
-
-                Ok(vec![
-                    ir::Statement::Compound {
-                        stmts: stmts
-                    }
-                ])
-            },
-            ast::Statement::Break => {
-                if self.inside_loop {
-                    Ok(vec![ir::Statement::Break])
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("Break outside a loop"),
-                        span: stmt.span
-                    })
-                }
-            },
-            ast::Statement::Continue => {
-                if self.inside_loop {
-                    Ok(vec![ir::Statement::Continue])
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("Continue outside a loop"),
-                        span: stmt.span
-                    })
-                }
-            },
-            ast::Statement::Return { expr } => {
-                let infos = self.build_expression(expr)?;
-                let mut infos = self.lvalue_to_rvalue(infos);
-                if infos.value.ty == self.current_ret_ty {
-                    infos.stmts.push(ir::Statement::Return {
-                        value: infos.value
-                    });
-                    Ok(infos.stmts)
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("Mismatching return type."), //TODO print expected ty
-                        span: stmt.span,
-                    })
-                }
-            },
-            ast::Statement::Expression { expr } => {
-                Ok(self.build_expression(expr)?.stmts)
-            },
-            ast::Statement::Print { expr } => {
-                //TODO: check if printable (anything but fn ??)
-                let infos = self.build_expression(expr)?;
-                let mut infos = self.lvalue_to_rvalue(infos);
-                infos.stmts.push(ir::Statement::Print {
-                    value: infos.value
-                });
-                Ok(infos.stmts)
-            },
+            if value.ty == *fb.ty.return_ty {
+                fb.terminate_current(Some(ir::Terminator::Ret(value)));
+                Ok(())
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Mismatching return type."),
+                    span: stmt.span
+                })
+            }
+        }
+        ast::Statement::Expression { expr } => {
+            build_expression(fb, expr)?;
+            Ok(())
         }
     }
+}
 
-    fn lvalue_to_rvalue(&mut self, infos: ExprInfos) -> ExprInfos {
-        if let ir::Type::LValue(sub) = infos.value.ty.clone() {
-            let mut stmts = infos.stmts;
-            let id = self.new_temp();
-            stmts.push(ir::Statement::Assign {
-                dest: id,
-                expr: ir::Expr::LValueToRValue(infos.value),
-            });
-            ExprInfos {
-                stmts: stmts,
-                value: ir::Value { id: id, ty: *sub },
-            }
-        } else {
-            infos
-        }
-    }
+fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) -> Result<ir::Value, SyntaxError> {
+    match expr.inner {
+        ast::Expression::Assign(lhs, rhs) => {
+            let lhs_value = build_expression(fb, *lhs)?;
+            let rhs_value = build_expression(fb, *rhs)?;
+            let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
 
-    fn build_expression(&mut self, expr: Spanned<ast::Expression>) -> Result<ExprInfos, SyntaxError> {
-        match expr.inner {
-            ast::Expression::Assign(dest, assign_expr) => {
-                let mut stmts = Vec::new();
-
-                let assign_infos = self.build_expression(*assign_expr)?;
-                let assign_infos = self.lvalue_to_rvalue(assign_infos);
-                stmts.extend(assign_infos.stmts);
-
-                let dest_infos = self.build_expression(*dest)?;
-                stmts.extend(dest_infos.stmts);
-
-                if let ir::Type::LValue(ty) = dest_infos.value.ty.clone() {
-                    if *ty == assign_infos.value.ty {
-                        stmts.push(ir::Statement::LValueSet {
-                            lvalue: dest_infos.value,
-                            rvalue: assign_infos.value.clone(),
-                        });
-
-                        Ok(ExprInfos {
-                            stmts: stmts,
-                            value: assign_infos.value,
-                        })
-                    } else {
-                        Err(SyntaxError {
-                            msg: format!("Mismatching types in assignment."),
-                            span: expr.span,
-                        })
-                    }
+            if let ir::Type::LValue(sub) = lhs_value.ty.clone() {
+                if *sub == rhs_value.ty.clone() {
+                    fb.add_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
+                    Ok(rhs_value)
                 } else {
                     Err(SyntaxError {
-                        msg: format!("Not assignable."),
+                        msg: format!("Mismtach assignment."),
+                        span: expr.span,
+                    })
+                }
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Can't assign to a non-lvalue."),
+                    span: expr.span,
+                })
+            }
+        },
+        ast::Expression::Subscript(array, index) => {
+            let array_value = build_expression(fb, *array)?;
+            let array_value = build_lvalue_to_rvalue(fb, array_value);
+            let index_value = build_expression(fb, *index)?;
+            let index_value = build_lvalue_to_rvalue(fb, index_value);
+
+            if let ir::Type::Array(sub) = array_value.ty.clone() {
+                if ir::Type::Int == index_value.ty {
+                    let value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(sub) };
+                    fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::ReadArray(array_value, index_value)));
+                    Ok(value)
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("Index must be of int type."),
+                        span: expr.span,
+                    })
+                }
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Subscript to a non-array."),
+                    span: expr.span,
+                })
+            }
+        },
+        ast::Expression::BinOp(code, lhs, rhs) => {
+            let lhs_value = build_expression(fb, *lhs)?;
+            let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+            let rhs_value = build_expression(fb, *rhs)?;
+            let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+
+            if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
+                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+
+                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::BinOp(op, lhs_value, rhs_value)));
+                Ok(value)
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Operation mismatching for those types."),
+                    span: expr.span,
+                })
+            }
+        },
+        ast::Expression::UnOp(code, sub) => {
+            let sub_value = build_expression(fb, *sub)?;
+            let sub_value = build_lvalue_to_rvalue(fb, sub_value);
+
+            if let Some((op, ty)) = tyck::unop_tyck(code, &sub_value.ty) {
+                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+
+                fb.add_statement(
+                    ir::Statement::Assign(
+                        value.clone(),
+                        ir::Expression::UnOp(op, sub_value)
+                    )
+                );
+                Ok(value)
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Operation mismatching for those types."),
+                    span: expr.span,
+                })
+            }
+        },
+        ast::Expression::FuncCall(func, params) => {
+            let func_value = build_expression(fb, *func)?;
+            let func_value = build_lvalue_to_rvalue(fb, func_value);
+
+            if let ir::Type::Function(func_ty) = func_value.ty.clone() {
+                let mut param_ty = Vec::new();
+                let mut param_values = Vec::new();
+                for param in params {
+                    let param = build_expression(fb, param)?;
+                    let param = build_lvalue_to_rvalue(fb, param);
+
+                    param_ty.push(param.ty.clone());
+                    param_values.push(param);
+                }
+
+                if param_ty == func_ty.params_ty {
+                    let value = ir::Value { id: fb.new_temp_id(), ty: *func_ty.return_ty };
+                    fb.add_statement(
+                        ir::Statement::Assign(
+                            value.clone(),
+                            ir::Expression::FuncCall(func_value, param_values)
+                        )
+                    );
+                    Ok(value)
+                } else {
+                    Err(SyntaxError {
+                        msg: format!("Mismatching params."),
                         span: expr.span
                     })
                 }
-
-            },
-            ast::Expression::Subscript(array, index) => {
-                let mut stmts = Vec::new();
-
-                let array_infos = self.build_expression(*array)?;
-                let array_infos = self.lvalue_to_rvalue(array_infos);
-                stmts.extend(array_infos.stmts);
-
-                let index_infos = self.build_expression(*index)?;
-                let index_infos = self.lvalue_to_rvalue(index_infos);
-                stmts.extend(index_infos.stmts);
-
-                if let ir::Type::Array(ty) = array_infos.value.ty.clone() {
-                    if let ir::Type::Int = index_infos.value.ty {
-                        let id = self.new_temp();
-                        stmts.push(ir::Statement::Assign {
-                            dest: id,
-                            expr: ir::Expr::Subscript(array_infos.value, index_infos.value),
-                        });
-
-                        Ok(ExprInfos {
-                            stmts: stmts,
-                            value: ir::Value { id: id, ty: *ty },
-                        })
-                    } else {
-                        Err(SyntaxError {
-                            msg: format!("Index must be an int."),
-                            span: expr.span,
-                        })
-                    }
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("Not an array."),
-                        span: expr.span,
-                    })
-                }
-            },
-            ast::Expression::BinOp(opcode, lhs, rhs) => {
-                let mut stmts = Vec::new();
-
-                let lhs_infos = self.build_expression(*lhs)?;
-                let lhs_infos = self.lvalue_to_rvalue(lhs_infos);
-                stmts.extend(lhs_infos.stmts);
-
-                let rhs_infos = self.build_expression(*rhs)?;
-                let rhs_infos = self.lvalue_to_rvalue(rhs_infos);
-                stmts.extend(rhs_infos.stmts);
-
-                if let Some((op, ty)) = tyck::binop_tyck(opcode, &lhs_infos.value.ty, &rhs_infos.value.ty) {
-                    let id = self.new_temp();
-
-                    stmts.push(ir::Statement::Assign {
-                        dest: id,
-                        expr: ir::Expr::BinOp(op, lhs_infos.value, rhs_infos.value),
-                    });
-
-                    Ok(ExprInfos {
-                        stmts: stmts,
-                        value: ir::Value { id: id, ty: ty },
-                    })
-
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("'{:?}' is not defined for those types.", opcode),
-                        span: expr.span,
-                    })
-                }
-            },
-            ast::Expression::UnOp(opcode, sub_expr) => {
-                let mut stmts = Vec::new();
-
-                let sub_infos = self.build_expression(*sub_expr)?;
-                let sub_infos = self.lvalue_to_rvalue(sub_infos);
-                stmts.extend(sub_infos.stmts);
-
-                if let Some((op, ty)) = tyck::unop_tyck(opcode, &sub_infos.value.ty) {
-                    let id = self.new_temp();
-
-                    stmts.push(ir::Statement::Assign {
-                        dest: id,
-                        expr: ir::Expr::UnOp(op, sub_infos.value),
-                    });
-
-                    Ok(ExprInfos {
-                        stmts: stmts,
-                        value: ir::Value { id: id, ty: ty },
-                    })
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("'{:?}' is not defined for this type.", opcode),
-                        span: expr.span,
-                    })
-                }
-            },
-            ast::Expression::FuncCall(func, params) => {
-                let mut stmts = Vec::new();
-                let func_infos = self.build_expression(*func)?;
-                let func_infos = self.lvalue_to_rvalue(func_infos);
-                stmts.extend(func_infos.stmts);
-
-                let mut provided_param_types = Vec::with_capacity(params.len());
-                let mut param_values = Vec::with_capacity(params.len());
-                for param in params {
-                    let param_infos = self.build_expression(param)?;
-                    let param_infos = self.lvalue_to_rvalue(param_infos);
-                    stmts.extend(param_infos.stmts);
-                    provided_param_types.push(param_infos.value.ty.clone());
-                    param_values.push(param_infos.value);
-                }
-
-                if let ir::Type::Function(ret, param_types) = func_infos.value.ty.clone() {
-                    if param_types != provided_param_types {
-                        return Err(SyntaxError {
-                            msg: format!("Mismatching types in function call."),
-                            span: expr.span,
-                        })
-                    }
-
-                    let id = self.new_temp();
-                    stmts.push(ir::Statement::Assign {
-                        dest: id,
-                        expr: ir::Expr::FuncCall(func_infos.value, param_values),
-                    });
-
-                    Ok(ExprInfos {
-                        stmts: stmts,
-                        value: ir::Value { id: id, ty: *ret },
-                    })
-
-                } else {
-                    Err(SyntaxError {
-                        msg: format!("Error not callable."),
-                        span: expr.span,
-                    })
-                }
-
-            },
-            ast::Expression::Paren(sub_expr) => {
-                self.build_expression(*sub_expr)
-            },
-            ast::Expression::Identifier(id) => {
-                let ty = if let Some(ty) = self.sym_table.get_ty(&id) {
-                    ty
-                } else {
-                    return Err(SyntaxError {
-                        msg: format!("'{}' is undefined here.", id),
-                        span: expr.span,
-                    })
-                };
-
-                let temp_id = self.new_temp();
-
-                Ok(ExprInfos {
-                    stmts: vec![ir::Statement::Assign {
-                        dest: temp_id,
-                        expr: ir::Expr::LoadVar(id),
-                    }],
-                    value: ir::Value { id: temp_id, ty: ir::Type::LValue(Box::new(ty.clone())) },
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Not callable."),
+                    span: expr.span
                 })
-            },
-            ast::Expression::Literal(literal) => {
-                let id = self.new_temp();
-                let ty = match &literal {
-                    &ast::Literal::Int(_) => ir::Type::Int,
-                    &ast::Literal::Double(_) => ir::Type::Double,
-                    &ast::Literal::Bool(_) => ir::Type::Bool,
-                };
-
-                Ok(ExprInfos {
-                    stmts: vec![ir::Statement::Assign {
-                        dest: id,
-                        expr: ir::Expr::Literal(literal),
-                    }],
-                    value: ir::Value { id: id, ty: ty },
+            }
+        },
+        ast::Expression::Paren(expr) => build_expression(fb, *expr),
+        ast::Expression::Identifier(id) => {
+            if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {
+                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+                fb.add_statement(ir::Statement::Assign(value.clone(), expr));
+                Ok(value)
+            } else {
+                Err(SyntaxError {
+                    msg: format!("'{}' is not defined here.", id),
+                    span: expr.span,
                 })
-            },
+            }
+        },
+        ast::Expression::Literal(lit) => {
+            let ty = match lit {
+                ast::Literal::Int(_) => ir::Type::Int,
+                ast::Literal::Double(_) => ir::Type::Double,
+                ast::Literal::Bool(_) => ir::Type::Bool,
+                ast::Literal::Unit => ir::Type::Unit,
+            };
+
+            let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+            fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
+            Ok(value)
         }
+    }
+}
+
+fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Value {
+    if let ir::Type::LValue(sub) = value.ty.clone() {
+        let id = fb.new_temp_id();
+        let rvalue = ir::Value { id: id, ty: *sub };
+        fb.add_statement(
+            ir::Statement::Assign(
+                rvalue.clone(),
+                ir::Expression::LValueLoad(value)
+            )
+        );
+        rvalue
+    } else {
+        value
     }
 }
 
@@ -587,7 +472,86 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
     }
 }
 
-struct ExprInfos {
-    stmts: Vec<ir::Statement>,
-    value: ir::Value,
+#[derive(Debug)]
+struct FunctionBuilder<'a> {
+    name: String,
+    ty: ir::FunctionType,
+    symbol_table: &'a mut SymbolTable,
+    locals: Vec<ir::LocalVar>,
+    local_counter: usize,
+    basic_blocks: Vec<ir::BasicBlock>,
+    current_bb_index: usize,
+    bb_counter: usize,
+    current_temp_id: usize,
+    current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)> //(continue, break)
+}
+
+impl<'a> FunctionBuilder<'a> {
+    fn new(name: String, ty: ir::FunctionType, st: &'a mut SymbolTable) -> Self {
+        FunctionBuilder {
+            name: name,
+            ty: ty,
+            symbol_table: st,
+            locals: Vec::new(),
+            local_counter: 0,
+            basic_blocks: vec![ir::BasicBlock { id: ir::BasicBlockId(0), stmts: Vec::new(), terminator: None }],
+            current_bb_index: 0,
+            bb_counter: 1,
+            current_temp_id: 0,
+            current_loop_info: None
+        }
+    }
+
+    fn to_function(self) -> ir::Declaration {
+        ir::Declaration::Function {
+            name: self.name,
+            ty: self.ty,
+            locals: self.locals,
+            bbs: self.basic_blocks,
+        }
+    }
+
+    fn new_temp_id(&mut self) -> usize {
+        let id = self.current_temp_id;
+        self.current_temp_id += 1;
+        id
+    }
+
+    fn register_param(&mut self, name: String, ty: ir::Type, param_index: Option<usize>) -> bool {
+        let res = self.symbol_table.register_local(name, ty.clone(), ir::LocalVarId(self.local_counter));
+        self.locals.push(ir::LocalVar {
+            id: ir::LocalVarId(self.local_counter),
+            ty: ty,
+            param_index: param_index,
+        });
+        self.local_counter += 1;
+        res
+    }
+
+    fn register_local_variable(&mut self, name: String, ty: ir::Type) -> bool {
+        self.register_param(name, ty, None)
+    }
+
+    fn cursor_to_end(&mut self) {
+        self.current_bb_index = self.basic_blocks.len() - 1;
+    }
+
+    fn add_statement(&mut self, stmt: ir::Statement) {
+        self.basic_blocks[self.current_bb_index].stmts.push(stmt);
+    }
+
+    fn change_terminator(&mut self, terminator: Option<ir::Terminator>) {
+        self.basic_blocks[self.current_bb_index].terminator = terminator;
+    }
+
+    fn terminate_current(&mut self, terminator: Option<ir::Terminator>) {
+        self.change_terminator(terminator);
+        self.basic_blocks.insert(self.current_bb_index + 1, ir::BasicBlock {
+            id: ir::BasicBlockId(self.bb_counter),
+            stmts: Vec::new(),
+            terminator: None
+        });
+        self.current_bb_index += 1;
+        self.bb_counter += 1;
+    }
 }

@@ -3,21 +3,6 @@ fn neg_square(x: double) -> double {
     return -y;
 }
 
-fn test_if(x: int) -> int {
-    if x < 0 {
-        return -x;
-    } else if x > 0 {
-        x + 2;
-    } else if x == 12 {
-        x;
-        loop {break;}
-    } else if x == 13 {
-        x;
-    } else {
-        x + 4;
-    }
-}
-
 fn test_loop(x: double) -> double {
     loop {
         return x;
@@ -26,10 +11,26 @@ fn test_loop(x: double) -> double {
     }
 }
 
-fn test_while(x: int) {
-    while x >= 0 {
-        x = x - 1;
+fn test_loop2() -> int {
+    let x = 0;
+    loop {
+        x = x + 1;
+        loop {
+            x = x - 1;
+        }
     }
+    return x;
+}
+
+fn test_while() -> int {
+    let i = 100;
+    while i > 0 {
+        i = i - 1;
+        loop {
+            break;
+        }
+    }
+    return i;
 }
 
 fn test_bool(b: bool) -> bool {
@@ -38,6 +39,7 @@ fn test_bool(b: bool) -> bool {
 
 fn test_ptr(ptr: *int) -> int {
     *ptr = 12;
+    ptr = ptr + 12;
     return *(&(*ptr));
 }
 

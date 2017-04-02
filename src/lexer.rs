@@ -3,7 +3,6 @@ use std::iter::Peekable;
 use std::str::FromStr;
 
 use itertools::Itertools;
-use unicode_xid::UnicodeXID;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -16,7 +15,6 @@ pub enum Token {
     ReturnKeyword,
     BreakKeyword,
     ContinueKeyword,
-    PrintKeyword,
     OpenParen,
     CloseParen,
     OpenSquare,
@@ -170,9 +168,9 @@ impl<'input> Iterator for Lexer<'input> {
                 }
 
             },
-            Some((i, c)) if UnicodeXID::is_xid_start(c) => {
+            Some((i, c)) if utils::is_identifier_start(c) => {
                 let mut id = c.to_string();
-                id.extend(self.chars.peeking_take_while(|c| UnicodeXID::is_xid_continue(c.1)).map(|i| i.1));
+                id.extend(self.chars.peeking_take_while(|c| utils::is_identifier_continue(c.1)).map(|i| i.1));
                 let len = id.len();
                 Some(Ok((i, utils::identifier_or_keyword(id), i + len)))
             },
@@ -189,6 +187,8 @@ impl<'input> Iterator for Lexer<'input> {
 
 mod utils {
     use super::Token;
+    use unicode_xid::UnicodeXID;
+    
     pub fn identifier_or_keyword(s: String) -> Token {
         match s.as_str() {
             "fn" => Token::FnKeyword,
@@ -200,10 +200,17 @@ mod utils {
             "return" => Token::ReturnKeyword,
             "break" => Token::BreakKeyword,
             "continue" => Token::ContinueKeyword,
-            "print" => Token::PrintKeyword,
             "true" => Token::BoolLit(true),
             "false" => Token::BoolLit(false),
             _ => Token::Identifier(s),
         }
+    }
+
+    pub fn is_identifier_start(c: char) -> bool {
+        UnicodeXID::is_xid_start(c) || c == '_'
+    }
+
+    pub fn is_identifier_continue(c: char) -> bool {
+        UnicodeXID::is_xid_continue(c) || c == '_'
     }
 }
