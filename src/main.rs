@@ -29,6 +29,9 @@ fn main() {
         .arg(Arg::with_name("ast")
             .long("ast")
             .help("Dump AST"))
+        .arg(Arg::with_name("ir")
+            .long("ir")
+            .help("Dump IR"))
         .arg(Arg::with_name("INPUT")
             .help("Input file")
             .required(true)
@@ -55,6 +58,7 @@ fn main() {
         }
     };
 
-    println!("SUCCESS");
-    ir::printer::print_ir(&tu);
+    if matches.is_present("ir") {
+        ir::printer::print_ir(&tu);
+    }
 }
