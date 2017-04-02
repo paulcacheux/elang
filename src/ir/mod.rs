@@ -13,6 +13,10 @@ pub struct TranslationUnit {
 
 #[derive(Debug, Clone)]
 pub enum Declaration {
+    ExternFunction {
+        name: String,
+        ty: FunctionType,
+    },
     Function {
         name: String,
         ty: FunctionType,

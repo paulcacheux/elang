@@ -10,6 +10,11 @@ pub struct TranslationUnit {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
+    ExternFunction {
+        name: String,
+        params: Vec<Spanned<ParseType>>,
+        return_ty: Spanned<ParseType>,
+    },
     Function {
         name: String,
         params: Vec<(String, Spanned<ParseType>)>,

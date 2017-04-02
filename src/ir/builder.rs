@@ -70,6 +70,28 @@ pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::Translatio
 
 fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolTable) -> Result<ir::Declaration, SyntaxError> {
     match decl.inner {
+        ast::Declaration::ExternFunction { name, params, return_ty } => {
+            let return_ty = build_type(return_ty)?;
+
+            let mut param_types = Vec::with_capacity(params.len());
+            for ty in params {
+                param_types.push(build_type(ty)?);
+            }
+
+            let ty = ir::FunctionType { return_ty: Box::new(return_ty), params_ty: param_types };
+
+            if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
+                return Err(SyntaxError {
+                    msg: format!("'{}' function is already defined.", name),
+                    span: decl.span,
+                })
+            }
+
+            Ok(ir::Declaration::ExternFunction {
+                name: name,
+                ty: ty,
+            })
+        },
         ast::Declaration::Function { name, params, return_ty, stmt } => {
             let return_ty = build_type(return_ty)?;
 

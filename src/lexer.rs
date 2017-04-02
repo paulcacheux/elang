@@ -6,6 +6,7 @@ use itertools::Itertools;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
+    ExternKeyword,
     FnKeyword,
     LetKeyword,
     WhileKeyword,
@@ -188,9 +189,10 @@ impl<'input> Iterator for Lexer<'input> {
 mod utils {
     use super::Token;
     use unicode_xid::UnicodeXID;
-    
+
     pub fn identifier_or_keyword(s: String) -> Token {
         match s.as_str() {
+            "extern" => Token::ExternKeyword,
             "fn" => Token::FnKeyword,
             "let" => Token::LetKeyword,
             "while" => Token::WhileKeyword,

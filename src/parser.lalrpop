@@ -8,7 +8,17 @@ pub TranslationUnit: TranslationUnit = {
 };
 
 Declaration: Spanned<Declaration> = {
+    Spanned<ExternFuncDecl>,
     Spanned<FuncDecl>,
+};
+
+ExternFuncDecl: Declaration = {
+    "extern" "fn" <id:Identifier> "(" <params:Comma<Spanned<Type>>> ")" <r:@R> <ty:("->" <Spanned<Type>>)?>
+    => Declaration::ExternFunction {
+        name: id,
+        params: params,
+        return_ty: ty.unwrap_or(Spanned::new(ParseType::Unit, Span(r, r + 1))),
+    }
 };
 
 FuncDecl: Declaration = {
@@ -232,6 +242,7 @@ extern {
     type Error = lexer::LexicalError;
 
     enum lexer::Token {
+        "extern" => lexer::Token::ExternKeyword,
         "fn" => lexer::Token::FnKeyword,
         "let" => lexer::Token::LetKeyword,
         "while" => lexer::Token::WhileKeyword,

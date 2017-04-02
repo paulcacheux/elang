@@ -8,6 +8,9 @@ pub fn print_ir(tu: &TranslationUnit) {
 
 fn print_declaration(decl: &Declaration) {
     match *decl {
+        Declaration::ExternFunction { ref name, ref ty } => {
+            println!("extern @{} {}", name, ty);
+        },
         Declaration::Function { ref name, ref ty, ref locals, ref bbs } => {
             println!("declare @{} {} {{", name, ty);
 

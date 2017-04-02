@@ -33,6 +33,15 @@ impl ASTPrinter {
 
         use self::Declaration::*;
         match decl.inner {
+            ExternFunction { ref name, ref params, ref return_ty } => {
+                println!("ExternFunctionDecl '{}' '{}'", name, return_ty.inner);
+                self.0 += 1;
+                for param in params {
+                    self.print_tab();
+                    println!("ParamDecl '{}'", param.inner);
+                }
+                self.0 -= 1;
+            },
             Function { ref name, ref params, ref return_ty, ref stmt } => {
                 println!("FunctionDecl '{}' '{}'", name, return_ty.inner);
                 self.0 += 1;
