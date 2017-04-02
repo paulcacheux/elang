@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use ir;
 use ast;
 use ast::{Span, Spanned};
@@ -123,6 +124,21 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
             }
 
             build_compound_statement(&mut function_builder, stmt)?;
+
+            if *function_builder.ty.return_ty == ir::Type::Unit {
+                function_builder.cursor_to_end();
+                let value = ir::Value { id: function_builder.new_temp_id(), ty: ir::Type::Unit };
+                function_builder.add_statement(
+                    ir::Statement::Assign(
+                        value.clone(),
+                        ir::Expression::Literal(ast::Literal::Unit)
+                    )
+                );
+                function_builder.terminate_current(TempTerminator::Ret(value));
+            }
+
+            function_builder.check_paths(decl.span)?;
+
             function_builder.symbol_table.end_local_scope();
 
             Ok(function_builder.to_function())
@@ -555,34 +571,63 @@ impl<'a> FunctionBuilder<'a> {
         }
     }
 
-    fn to_function(mut self) -> ir::Declaration {
-        if *self.ty.return_ty == ir::Type::Unit {
-            self.cursor_to_end();
-            let value = ir::Value { id: self.new_temp_id(), ty: ir::Type::Unit };
-            self.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
-            self.terminate_current(TempTerminator::Ret(value));
+    fn check_paths(&mut self, span: Span) -> Result<(), SyntaxError> {
+        let mut succs: HashMap<ir::BasicBlockId, Vec<ir::BasicBlockId>> = HashMap::new();
+        for (i, bb) in self.basic_blocks.iter().enumerate() {
+            let succ_list = succs.entry(bb.id).or_insert(Vec::new());
+            match bb.terminator {
+                TempTerminator::Jmp(id) => { succ_list.push(id); },
+                TempTerminator::Ret(_) => { },
+                TempTerminator::Jz(_, id) => {
+                    succ_list.push(id);
+                    if i + 1 < self.basic_blocks.len() {
+                        succ_list.push(self.basic_blocks[i + 1].id);
+                    }
+                },
+                TempTerminator::Fallthrough => {
+                    if i + 1 < self.basic_blocks.len() {
+                        succ_list.push(self.basic_blocks[i + 1].id);
+                    }
+                }
+            }
         }
 
+        let mut opened = Vec::new();
+        opened.push(ir::BasicBlockId(0));
+        let mut touched = HashSet::<ir::BasicBlockId>::new();
+
+        while opened.len() != 0 {
+            let id = opened.pop().unwrap();
+            for succ in succs.get(&id).expect("WTF bro") {
+                if !touched.contains(succ) {
+                    opened.push(*succ);
+                }
+            }
+            touched.insert(id);
+        }
+
+        self.basic_blocks.retain(|bb| touched.contains(&bb.id));
+
+        match self.basic_blocks.last().unwrap().terminator {
+            TempTerminator::Fallthrough | TempTerminator::Jz(_, _) => {
+                return Err(SyntaxError {
+                    msg: format!("Not all paths return."),
+                    span: span,
+                })
+            }
+            _ => return Ok(())
+        }
+    }
+
+    fn to_function(self) -> ir::Declaration {
         let mut bbs = Vec::with_capacity(self.basic_blocks.len());
 
         for i in 0..self.basic_blocks.len() {
             let term = match self.basic_blocks[i].terminator.clone() {
                 TempTerminator::Jmp(id) => ir::Terminator::Br(id),
                 TempTerminator::Ret(value) => ir::Terminator::Ret(value),
-                TempTerminator::Fallthrough => {
-                    if i + 1 == self.basic_blocks.len() {
-                        ir::Terminator::Panic
-                    } else {
-                        ir::Terminator::Br(self.basic_blocks[i + 1].id)
-                    }
-                },
-                TempTerminator::Jz(value, id) => {
-                    if i + 1 == self.basic_blocks.len() {
-                        ir::Terminator::Panic
-                    } else {
-                        ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
-                    }
-                }
+                TempTerminator::Fallthrough => ir::Terminator::Br(self.basic_blocks[i + 1].id),
+                TempTerminator::Jz(value, id) => ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
             };
 
             bbs.push(ir::BasicBlock {

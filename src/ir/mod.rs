@@ -44,7 +44,6 @@ pub enum Terminator {
     Br(BasicBlockId),
     BrCond(Value, BasicBlockId, BasicBlockId), // (true, false)
     Ret(Value),
-    Panic,
 }
 
 #[derive(Debug, Clone)]
@@ -65,7 +64,7 @@ pub enum Expression {
     Literal(ast::Literal),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct BasicBlockId(usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

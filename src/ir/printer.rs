@@ -125,9 +125,6 @@ fn print_terminator(term: &Terminator) {
             print_value(val);
             println!(";");
         }
-        Terminator::Panic => {
-            println!("\tpanic;");
-        }
     }
 }
 
