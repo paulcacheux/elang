@@ -1,42 +1,84 @@
 use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
+use ast::Span;
+use ir::builder::SyntaxError;
 
-pub fn print_diagnostic(input: &str, error: ParseError<usize, Token, LexicalError>) {
-    let error_lines = match error {
-        ParseError::InvalidToken { location } => {
-            println!("Invalid token.");
-            get_lines(input, (location, location + 1))
-        },
-        ParseError::UnrecognizedToken { token, expected } => {
-            let lines = if let Some((start, tok, end)) = token {
-                println!("Unrecognized token: {:?}.", tok);
-                get_lines(input, (start, end))
-            } else {
-                println!("Unexpected eof.");
-                Vec::new()
-            };
-            if expected.len() != 0 {
-                println!("Expected one of: {}", expected.join(", "));
+pub struct Error<'a> {
+    msg: String,
+    lines: Vec<Line<'a>>,
+}
+
+struct Line<'a> {
+    n: usize,
+    text: &'a str,
+    arrow: String,
+}
+
+pub trait ToError<'a> {
+    fn convert(self, input: &'a str) -> Error<'a>;
+}
+
+impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
+    fn convert(self, input: &'a str) -> Error<'a> {
+        match self {
+            ParseError::InvalidToken { location } => {
+                Error {
+                    msg: format!("Invalid token."),
+                    lines: get_lines(input, Span(location, location + 1))
+                }
+            },
+            ParseError::UnrecognizedToken { token, expected } => {
+                let mut error = if let Some((start, tok, end)) = token {
+                    Error {
+                        msg: format!("Unrecognized token: {:?}.", tok),
+                        lines: get_lines(input, Span(start, end))
+                    }
+                } else {
+                    Error {
+                        msg: format!("Unexpected eof."),
+                        lines: Vec::new()
+                    }
+                };
+                if expected.len() != 0 {
+                    error.msg.push_str(&format!("Expected one of: {}", expected.join(", ")));
+                }
+                error
+            },
+            ParseError::ExtraToken { token: (start, tok, end) } => {
+                Error {
+                    msg: format!("Extra token: {:?}.", tok),
+                    lines: get_lines(input, Span(start, end))
+                }
+            },
+            ParseError::User { error: LexicalError { msg, pos } } => {
+                Error {
+                    msg: msg,
+                    lines: get_lines(input, Span(pos, pos + 1))
+                }
             }
-            lines
-        },
-        ParseError::ExtraToken { token: (start, tok, end) } => {
-            println!("Extra token: {:?}.", tok);
-            get_lines(input, (start, end))
-        },
-        ParseError::User { error: LexicalError { msg, pos } } => {
-            println!("{}", msg);
-            get_lines(input, (pos, pos + 1))
         }
-    };
-
-    for (i, (line, arrow)) in error_lines {
-        println!("{:<5}: {}", i+1, line);
-        println!("       {}", arrow);
     }
 }
 
-fn get_lines<'a>(input: &'a str, span: (usize, usize)) -> Vec<(usize, (&'a str, String))> {
+impl<'a> ToError<'a> for SyntaxError {
+    fn convert(self, input: &'a str) -> Error<'a> {
+        Error {
+            msg: self.msg,
+            lines: get_lines(input, self.span),
+        }
+    }
+}
+
+pub fn print_diagnostic<'a, E: ToError<'a>>(input: &'a str, error: E) {
+    let error = error.convert(input);
+    println!("{}", error.msg);
+    for line in error.lines {
+        println!("{:<5}: {}", line.n+1, line.text);
+        println!("       {}", line.arrow);
+    }
+}
+
+fn get_lines<'a>(input: &'a str, span: Span) -> Vec<Line> {
     let mut arrow = String::with_capacity(input.len());
 
     for (i, c) in input.chars().enumerate() {
@@ -53,5 +95,6 @@ fn get_lines<'a>(input: &'a str, span: (usize, usize)) -> Vec<(usize, (&'a str, 
         .filter(|&(_, (_, ref arrow))| {
             arrow.contains('^')
         })
+        .map(|(n, (t, a))| Line { n: n, text: t, arrow: a })
         .collect()
 }

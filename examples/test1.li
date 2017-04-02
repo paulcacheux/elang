@@ -11,7 +11,7 @@ fn test_if(x: int) -> int {
     } else if x == 12 {
         x;
         loop {break;}
-    } else if x == 13 {
+    } else if x {
         x;
     } else {
         x + 4;

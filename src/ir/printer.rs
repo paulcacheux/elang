@@ -9,7 +9,7 @@ pub fn print_ir(tu: &TranslationUnit) {
 fn print_declaration(decl: &Declaration) {
     match *decl {
         Declaration::ExternFunction { ref name, ref ty } => {
-            println!("extern @{} {}", name, ty);
+            println!("extern @{} {}\n", name, ty);
         },
         Declaration::Function { ref name, ref ty, ref locals, ref bbs } => {
             println!("declare @{} {} {{", name, ty);
@@ -21,7 +21,7 @@ fn print_declaration(decl: &Declaration) {
             for bb in bbs {
                 print_basic_block(bb);
             }
-            println!("}}");
+            println!("}}\n");
         }
     }
 }

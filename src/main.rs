@@ -51,8 +51,7 @@ fn main() {
     let tu = match ir::builder::build_translation_unit(tu) {
         Ok(tu) => tu,
         Err(err) => {
-            println!("{:?}", err);
-            return
+            return diagnostics::print_diagnostic(&input, err);
         }
     };
 
