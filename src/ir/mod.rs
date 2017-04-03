@@ -25,16 +25,16 @@ pub enum Declaration {
 
 #[derive(Debug, Clone)]
 pub struct LocalVar {
-    id: LocalVarId,
-    ty: Type,
-    param_index: Option<usize>,
+    pub id: LocalVarId,
+    pub ty: Type,
+    pub param_index: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
 pub struct BasicBlock {
-    id: BasicBlockId,
-    stmts: Vec<Statement>,
-    terminator: Terminator,
+    pub id: BasicBlockId,
+    pub stmts: Vec<Statement>,
+    pub terminator: Terminator,
 }
 
 #[derive(Debug, Clone)]
@@ -63,15 +63,15 @@ pub enum Expression {
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct BasicBlockId(usize);
+pub struct BasicBlockId(pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LocalVarId(usize);
+pub struct LocalVarId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Value {
-    id: usize,
-    ty: Type,
+    pub id: usize,
+    pub ty: Type,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,8 +131,8 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionType {
-    return_ty: Box<Type>,
-    params_ty: Vec<Type>,
+    pub return_ty: Box<Type>,
+    pub params_ty: Vec<Type>,
 }
 
 impl fmt::Display for Type {

@@ -14,6 +14,7 @@ mod parser;
 mod lexer;
 mod diagnostics;
 mod ir;
+mod codegen;
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;
@@ -64,4 +65,8 @@ fn main() {
     if matches.is_present("ir") {
         ir::printer::print_ir(&tu);
     }
+
+    let output = "elang_examples/OUTPUT.c";
+    let mut file = File::create(output).unwrap();
+    codegen::c_gen::gen_translation_unit(&mut file, tu).expect("error gen");
 }
