@@ -4,6 +4,7 @@ use itertools::Itertools;
 
 pub mod builder;
 pub mod printer;
+pub mod opt;
 mod tyck;
 
 #[derive(Debug, Clone)]

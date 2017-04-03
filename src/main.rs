@@ -82,6 +82,9 @@ fn main() {
         .arg(Arg::with_name("ir")
             .long("ir")
             .help("Dump IR"))
+        .arg(Arg::with_name("opt")
+            .short("O")
+            .help("Activate optimizations"))
         .arg(Arg::with_name("INPUT")
             .help("Input file")
             .required(true)
@@ -102,12 +105,16 @@ fn main() {
         ast::printer::print_ast(&tu);
     }
 
-    let tu = match ir::builder::build_translation_unit(tu) {
+    let mut tu = match ir::builder::build_translation_unit(tu) {
         Ok(tu) => tu,
         Err(err) => {
             return diagnostics::print_diagnostic(&input, err);
         }
     };
+
+    if matches.is_present("opt") {
+        ir::opt::opt_translation_unit(&mut tu);
+    }
 
     if matches.is_present("ir") {
         ir::printer::print_ir(&tu);

@@ -598,7 +598,7 @@ impl<'a> FunctionBuilder<'a> {
 
         while opened.len() != 0 {
             let id = opened.pop().unwrap();
-            for succ in succs.get(&id).expect("WTF bro") {
+            for succ in succs.get(&id).unwrap() {
                 if !touched.contains(succ) {
                     opened.push(*succ);
                 }
