@@ -1,7 +1,10 @@
 use ast;
 use ir;
 
-pub fn binop_tyck(op: ast::BinOpCode, lhs_ty: &ir::Type, rhs_ty: &ir::Type) -> Option<(ir::BinOpCode, ir::Type)> {
+pub fn binop_tyck(op: ast::BinOpCode,
+                  lhs_ty: &ir::Type,
+                  rhs_ty: &ir::Type)
+                  -> Option<(ir::BinOpCode, ir::Type)> {
     use ast::BinOpCode::*;
     use ir::Type;
     match (op, lhs_ty, rhs_ty) {
@@ -19,17 +22,25 @@ pub fn binop_tyck(op: ast::BinOpCode, lhs_ty: &ir::Type, rhs_ty: &ir::Type) -> O
         (Less, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntLess, Type::Bool)),
         (LessEqual, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntLessEqual, Type::Bool)),
         (Greater, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntGreater, Type::Bool)),
-        (GreaterEqual, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntGreaterEqual, Type::Bool)),
+        (GreaterEqual, &Type::Int, &Type::Int) => {
+            Some((ir::BinOpCode::IntGreaterEqual, Type::Bool))
+        }
 
         (Less, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleLess, Type::Bool)),
-        (LessEqual, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleLessEqual, Type::Bool)),
+        (LessEqual, &Type::Double, &Type::Double) => {
+            Some((ir::BinOpCode::DoubleLessEqual, Type::Bool))
+        }
         (Greater, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleGreater, Type::Bool)),
-        (GreaterEqual, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleGreaterEqual, Type::Bool)),
+        (GreaterEqual, &Type::Double, &Type::Double) => {
+            Some((ir::BinOpCode::DoubleGreaterEqual, Type::Bool))
+        }
 
         (Equal, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntEqual, Type::Bool)),
         (NotEqual, &Type::Int, &Type::Int) => Some((ir::BinOpCode::IntNotEqual, Type::Bool)),
         (Equal, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleEqual, Type::Bool)),
-        (NotEqual, &Type::Double, &Type::Double) => Some((ir::BinOpCode::DoubleNotEqual, Type::Bool)),
+        (NotEqual, &Type::Double, &Type::Double) => {
+            Some((ir::BinOpCode::DoubleNotEqual, Type::Bool))
+        }
         (Equal, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolEqual, Type::Bool)),
         (NotEqual, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolNotEqual, Type::Bool)),
 
@@ -37,7 +48,7 @@ pub fn binop_tyck(op: ast::BinOpCode, lhs_ty: &ir::Type, rhs_ty: &ir::Type) -> O
         (LogicalOr, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolLogicalOr, Type::Bool)),
 
         (Add, &Type::Ptr(_), &Type::Int) => Some((ir::BinOpCode::PtrAdd, lhs_ty.clone())),
-        _ => None
+        _ => None,
     }
 }
 
@@ -50,6 +61,6 @@ pub fn unop_tyck(op: ast::UnOpCode, ty: &ir::Type) -> Option<(ir::UnOpCode, ir::
         (LogicalNot, &Type::Bool) => Some((ir::UnOpCode::BoolLogicalNot, Type::Bool)),
         (AddressOf, ty) => Some((ir::UnOpCode::AddressOf, Type::Ptr(Box::new(ty.clone())))),
         (Deref, &Type::Ptr(ref sub)) => Some((ir::UnOpCode::PtrDeref, Type::LValue(sub.clone()))),
-        _ => None
+        _ => None,
     }
 }

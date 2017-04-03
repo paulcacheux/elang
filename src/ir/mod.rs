@@ -14,16 +14,13 @@ pub struct TranslationUnit {
 
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    ExternFunction {
-        name: String,
-        ty: FunctionType,
-    },
+    ExternFunction { name: String, ty: FunctionType },
     Function {
         name: String,
         ty: FunctionType,
         locals: Vec<LocalVar>,
         bbs: Vec<BasicBlock>,
-    }
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -148,13 +145,16 @@ impl fmt::Display for Type {
             Type::LValue(ref sub) => write!(f, "&{}", *sub),
             Type::Array(ref sub) => write!(f, "[{}]", *sub),
             Type::Ptr(ref sub) => write!(f, "*{}", *sub),
-            Type::Function(ref func) => write!(f, "{}", func)
+            Type::Function(ref func) => write!(f, "{}", func),
         }
     }
 }
 
 impl fmt::Display for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}) -> {}", self.params_ty.iter().join(", "), *self.return_ty)
+        write!(f,
+               "({}) -> {}",
+               self.params_ty.iter().join(", "),
+               *self.return_ty)
     }
 }

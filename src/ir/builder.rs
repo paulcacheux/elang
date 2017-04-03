@@ -34,7 +34,8 @@ impl SymbolTable {
         self.locals.pop();
     }
 
-    fn register_local(&mut self, name: String, ty: ir::Type, id: ir::LocalVarId) -> bool { // return false if already on scope
+    fn register_local(&mut self, name: String, ty: ir::Type, id: ir::LocalVarId) -> bool {
+        // return false if already on scope
         self.locals.last_mut().unwrap().insert(name, (id, ty)).is_none()
     }
 
@@ -45,7 +46,8 @@ impl SymbolTable {
     fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
         for scope in self.locals.iter().rev() {
             if let Some(&(ref id, ref ty)) = scope.get(name) {
-                return Some((ir::Type::LValue(Box::new(ty.clone())), ir::Expression::LocalVarLoad(id.clone())));
+                return Some((ir::Type::LValue(Box::new(ty.clone())),
+                             ir::Expression::LocalVarLoad(id.clone())));
             }
         }
         if let Some(ty) = self.globals.get(name) {
@@ -56,7 +58,8 @@ impl SymbolTable {
     }
 }
 
-pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::TranslationUnit, SyntaxError> {
+pub fn build_translation_unit(tu: ast::TranslationUnit)
+                              -> Result<ir::TranslationUnit, SyntaxError> {
     let mut symbol_table = SymbolTable::new();
 
     let mut declarations = Vec::with_capacity(tu.declarations.len());
@@ -64,12 +67,12 @@ pub fn build_translation_unit(tu: ast::TranslationUnit) -> Result<ir::Translatio
         declarations.push(build_declaration(decl, &mut symbol_table)?);
     }
 
-    Ok(ir::TranslationUnit {
-        declarations: declarations
-    })
+    Ok(ir::TranslationUnit { declarations: declarations })
 }
 
-fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolTable) -> Result<ir::Declaration, SyntaxError> {
+fn build_declaration(decl: Spanned<ast::Declaration>,
+                     symbol_table: &mut SymbolTable)
+                     -> Result<ir::Declaration, SyntaxError> {
     match decl.inner {
         ast::Declaration::ExternFunction { name, params, return_ty } => {
             let return_ty = build_type(return_ty)?;
@@ -79,20 +82,23 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
                 param_types.push(build_type(ty)?);
             }
 
-            let ty = ir::FunctionType { return_ty: Box::new(return_ty), params_ty: param_types };
+            let ty = ir::FunctionType {
+                return_ty: Box::new(return_ty),
+                params_ty: param_types,
+            };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
                     msg: format!("'{}' function is already defined.", name),
                     span: decl.span,
-                })
+                });
             }
 
             Ok(ir::Declaration::ExternFunction {
                 name: name,
                 ty: ty,
             })
-        },
+        }
         ast::Declaration::Function { name, params, return_ty, stmt } => {
             let return_ty = build_type(return_ty)?;
 
@@ -103,13 +109,16 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
                 param_types.push(build_type(ty)?);
             }
 
-            let ty = ir::FunctionType { return_ty: Box::new(return_ty), params_ty: param_types };
+            let ty = ir::FunctionType {
+                return_ty: Box::new(return_ty),
+                params_ty: param_types,
+            };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
                     msg: format!("'{}' function is already defined.", name),
                     span: decl.span,
-                })
+                });
             }
 
             let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
@@ -119,7 +128,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
                     return Err(SyntaxError {
                         msg: format!("'{}' is already defined.", name.inner),
                         span: name.span,
-                    })
+                    });
                 }
             }
 
@@ -127,7 +136,10 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
 
             if *function_builder.ty.return_ty == ir::Type::Unit {
                 function_builder.cursor_to_end();
-                let value = ir::Value { id: function_builder.new_temp_id(), ty: ir::Type::Unit };
+                let value = ir::Value {
+                    id: function_builder.new_temp_id(),
+                    ty: ir::Type::Unit,
+                };
                 function_builder.add_statement(
                     ir::Statement::Assign(
                         value.clone(),
@@ -146,7 +158,9 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
     }
 }
 
-fn build_compound_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::CompoundStatement>) -> Result<(), SyntaxError> {
+fn build_compound_statement(fb: &mut FunctionBuilder,
+                            stmt: Spanned<ast::CompoundStatement>)
+                            -> Result<(), SyntaxError> {
     fb.symbol_table.start_local_scope();
     for s in stmt.inner.0 {
         build_statement(fb, s)?;
@@ -155,7 +169,9 @@ fn build_compound_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Compoun
     Ok(())
 }
 
-fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> Result<(), SyntaxError> {
+fn build_statement(fb: &mut FunctionBuilder,
+                   stmt: Spanned<ast::Statement>)
+                   -> Result<(), SyntaxError> {
     match stmt.inner {
         ast::Statement::Compound(c) => build_compound_statement(fb, c),
         ast::Statement::Let { name, ty, expr } => {
@@ -173,11 +189,14 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                     return Err(SyntaxError {
                         msg: format!("'{}' is already defined in this scope.", name),
                         span: stmt.span,
-                    })
+                    });
                 }
 
                 let (_, lval_expr) = fb.symbol_table.get_var(&name).unwrap(); //TODO optimize
-                let lvalue = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ty)) };
+                let lvalue = ir::Value {
+                    id: fb.new_temp_id(),
+                    ty: ir::Type::LValue(Box::new(ty)),
+                };
                 fb.add_statement(ir::Statement::Assign(lvalue.clone(), lval_expr));
                 fb.add_statement(ir::Statement::LValueSet(lvalue, expr_value));
                 Ok(())
@@ -187,7 +206,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                     span: stmt.span,
                 })
             }
-        },
+        }
         ast::Statement::Loop { stmt } => {
             let continue_id = fb.bb_counter;
             fb.terminate_current(TempTerminator::Fallthrough);
@@ -198,13 +217,14 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             fb.current_bb_index = stmt_index;
             let old_loop_infos = fb.current_loop_info.clone();
-            fb.current_loop_info = Some((ir::BasicBlockId(continue_id), ir::BasicBlockId(break_id)));
+            fb.current_loop_info = Some((ir::BasicBlockId(continue_id),
+                                         ir::BasicBlockId(break_id)));
             build_compound_statement(fb, stmt)?;
             fb.current_loop_info = old_loop_infos;
 
             fb.cursor_to_end();
             Ok(())
-        },
+        }
         ast::Statement::While { cond, stmt } => {
             let error_span = cond.span;
             let continue_id = fb.bb_counter;
@@ -224,21 +244,22 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                 return Err(SyntaxError {
                     msg: format!("Condition type must be bool."),
                     span: error_span,
-                })
+                });
             }
 
             fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(break_id)));
 
             fb.current_bb_index = stmt_index;
             let old_loop_infos = fb.current_loop_info.clone();
-            fb.current_loop_info = Some((ir::BasicBlockId(continue_id), ir::BasicBlockId(break_id)));
+            fb.current_loop_info = Some((ir::BasicBlockId(continue_id),
+                                         ir::BasicBlockId(break_id)));
             build_compound_statement(fb, stmt)?;
             fb.current_loop_info = old_loop_infos;
 
             fb.symbol_table.end_local_scope();
             fb.cursor_to_end();
             Ok(())
-        },
+        }
         ast::Statement::If { if_branch, elseif_branches, else_branch } => {
             let branches = vec![if_branch].into_iter().chain(elseif_branches);
             let mut finalizer_indexes = Vec::new();
@@ -253,7 +274,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                     return Err(SyntaxError {
                         msg: format!("Condititoon type must be bool."),
                         span: error_span,
-                    })
+                    });
                 }
 
                 let cond_index = fb.current_bb_index;
@@ -290,7 +311,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             fb.cursor_to_end();
             Ok(())
-        },
+        }
         ast::Statement::Break => {
             if let Some((_, id)) = fb.current_loop_info.clone() {
                 fb.terminate_current(TempTerminator::Jmp(id));
@@ -320,7 +341,10 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
                 let value = build_lvalue_to_rvalue(fb, value);
                 (value, error_span)
             } else {
-                let value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Unit };
+                let value = ir::Value {
+                    id: fb.new_temp_id(),
+                    ty: ir::Type::Unit,
+                };
                 fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
                 (value, stmt.span)
             };
@@ -331,7 +355,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             } else {
                 Err(SyntaxError {
                     msg: format!("Mismatching return type."),
-                    span: error_span
+                    span: error_span,
                 })
             }
         }
@@ -342,7 +366,9 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
     }
 }
 
-fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) -> Result<ir::Value, SyntaxError> {
+fn build_expression(fb: &mut FunctionBuilder,
+                    expr: Spanned<ast::Expression>)
+                    -> Result<ir::Value, SyntaxError> {
     match expr.inner {
         ast::Expression::Assign(lhs, rhs) => {
             let lhs_value = build_expression(fb, *lhs)?;
@@ -365,7 +391,7 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::Subscript(array, index) => {
             let array_value = build_expression(fb, *array)?;
             let array_value = build_lvalue_to_rvalue(fb, array_value);
@@ -374,7 +400,10 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
 
             if let ir::Type::Array(sub) = array_value.ty.clone() {
                 if ir::Type::Int == index_value.ty {
-                    let value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(sub) };
+                    let value = ir::Value {
+                        id: fb.new_temp_id(),
+                        ty: ir::Type::LValue(sub),
+                    };
                     fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::ReadArray(array_value, index_value)));
                     Ok(value)
                 } else {
@@ -389,7 +418,7 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::BinOp(code, lhs, rhs) => {
             let lhs_value = build_expression(fb, *lhs)?;
             let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
@@ -397,9 +426,15 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
             let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
 
             if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
-                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+                let value = ir::Value {
+                    id: fb.new_temp_id(),
+                    ty: ty,
+                };
 
-                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::BinOp(op, lhs_value, rhs_value)));
+                fb.add_statement(ir::Statement::Assign(value.clone(),
+                                                       ir::Expression::BinOp(op,
+                                                                             lhs_value,
+                                                                             rhs_value)));
                 Ok(value)
             } else {
                 Err(SyntaxError {
@@ -407,20 +442,19 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::UnOp(code, sub) => {
             let sub_value = build_expression(fb, *sub)?;
             let sub_value = build_lvalue_to_rvalue(fb, sub_value);
 
             if let Some((op, ty)) = tyck::unop_tyck(code, &sub_value.ty) {
-                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+                let value = ir::Value {
+                    id: fb.new_temp_id(),
+                    ty: ty,
+                };
 
-                fb.add_statement(
-                    ir::Statement::Assign(
-                        value.clone(),
-                        ir::Expression::UnOp(op, sub_value)
-                    )
-                );
+                fb.add_statement(ir::Statement::Assign(value.clone(),
+                                                       ir::Expression::UnOp(op, sub_value)));
                 Ok(value)
             } else {
                 Err(SyntaxError {
@@ -428,7 +462,7 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::FuncCall(func, params) => {
             let func_value = build_expression(fb, *func)?;
             let func_value = build_lvalue_to_rvalue(fb, func_value);
@@ -445,7 +479,10 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                 }
 
                 if param_ty == func_ty.params_ty {
-                    let value = ir::Value { id: fb.new_temp_id(), ty: *func_ty.return_ty };
+                    let value = ir::Value {
+                        id: fb.new_temp_id(),
+                        ty: *func_ty.return_ty,
+                    };
                     fb.add_statement(
                         ir::Statement::Assign(
                             value.clone(),
@@ -456,20 +493,23 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                 } else {
                     Err(SyntaxError {
                         msg: format!("Mismatching params."),
-                        span: expr.span
+                        span: expr.span,
                     })
                 }
             } else {
                 Err(SyntaxError {
                     msg: format!("Not callable."),
-                    span: expr.span
+                    span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
             if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {
-                let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+                let value = ir::Value {
+                    id: fb.new_temp_id(),
+                    ty: ty,
+                };
                 fb.add_statement(ir::Statement::Assign(value.clone(), expr));
                 Ok(value)
             } else {
@@ -478,7 +518,7 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::Literal(lit) => {
             let ty = match lit {
                 ast::Literal::Int(_) => ir::Type::Int,
@@ -487,7 +527,10 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                 ast::Literal::Unit => ir::Type::Unit,
             };
 
-            let value = ir::Value { id: fb.new_temp_id(), ty: ty };
+            let value = ir::Value {
+                id: fb.new_temp_id(),
+                ty: ty,
+            };
             fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
             Ok(value)
         }
@@ -498,12 +541,7 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
     if let ir::Type::LValue(sub) = value.ty.clone() {
         let id = fb.new_temp_id();
         let rvalue = ir::Value { id: id, ty: *sub };
-        fb.add_statement(
-            ir::Statement::Assign(
-                rvalue.clone(),
-                ir::Expression::LValueLoad(value)
-            )
-        );
+        fb.add_statement(ir::Statement::Assign(rvalue.clone(), ir::Expression::LValueLoad(value)));
         rvalue
     } else {
         value
@@ -520,10 +558,12 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "int" => Ok(ir::Type::Int),
                 "double" => Ok(ir::Type::Double),
                 "bool" => Ok(ir::Type::Bool),
-                other => Err(SyntaxError {
-                    msg: format!("Unrecognized type '{}'.", other),
-                    span: parse_ty.span
-                }),
+                other => {
+                    Err(SyntaxError {
+                        msg: format!("Unrecognized type '{}'.", other),
+                        span: parse_ty.span,
+                    })
+                }
             }
         }
     }
@@ -555,7 +595,7 @@ struct FunctionBuilder<'a> {
     current_bb_index: usize,
     bb_counter: usize,
     current_temp_id: usize,
-    current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)> //(continue, break)
+    current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)>, // (continue, break)
 }
 
 impl<'a> FunctionBuilder<'a> {
@@ -566,11 +606,15 @@ impl<'a> FunctionBuilder<'a> {
             symbol_table: st,
             locals: Vec::new(),
             local_counter: 0,
-            basic_blocks: vec![TempBasicBlock { id: ir::BasicBlockId(0), stmts: Vec::new(), terminator: TempTerminator::Fallthrough }],
+            basic_blocks: vec![TempBasicBlock {
+                                   id: ir::BasicBlockId(0),
+                                   stmts: Vec::new(),
+                                   terminator: TempTerminator::Fallthrough,
+                               }],
             current_bb_index: 0,
             bb_counter: 1,
             current_temp_id: 0,
-            current_loop_info: None
+            current_loop_info: None,
         }
     }
 
@@ -579,14 +623,16 @@ impl<'a> FunctionBuilder<'a> {
         for (i, bb) in self.basic_blocks.iter().enumerate() {
             let succ_list = succs.entry(bb.id).or_insert(Vec::new());
             match bb.terminator {
-                TempTerminator::Jmp(id) => { succ_list.push(id); },
-                TempTerminator::Ret(_) => { },
+                TempTerminator::Jmp(id) => {
+                    succ_list.push(id);
+                }
+                TempTerminator::Ret(_) => {}
                 TempTerminator::Jz(_, id) => {
                     succ_list.push(id);
                     if i + 1 < self.basic_blocks.len() {
                         succ_list.push(self.basic_blocks[i + 1].id);
                     }
-                },
+                }
                 TempTerminator::Fallthrough => {
                     if i + 1 < self.basic_blocks.len() {
                         succ_list.push(self.basic_blocks[i + 1].id);
@@ -612,13 +658,14 @@ impl<'a> FunctionBuilder<'a> {
         self.basic_blocks.retain(|bb| touched.contains(&bb.id));
 
         match self.basic_blocks.last().unwrap().terminator {
-            TempTerminator::Fallthrough | TempTerminator::Jz(_, _) => {
+            TempTerminator::Fallthrough |
+            TempTerminator::Jz(_, _) => {
                 return Err(SyntaxError {
                     msg: format!("Not all paths return."),
                     span: span,
                 })
             }
-            _ => return Ok(())
+            _ => return Ok(()),
         }
     }
 
@@ -630,7 +677,9 @@ impl<'a> FunctionBuilder<'a> {
                 TempTerminator::Jmp(id) => ir::Terminator::Br(id),
                 TempTerminator::Ret(value) => ir::Terminator::Ret(value),
                 TempTerminator::Fallthrough => ir::Terminator::Br(self.basic_blocks[i + 1].id),
-                TempTerminator::Jz(value, id) => ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
+                TempTerminator::Jz(value, id) => {
+                    ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
+                }
             };
 
             bbs.push(ir::BasicBlock {
@@ -655,7 +704,8 @@ impl<'a> FunctionBuilder<'a> {
     }
 
     fn register_param(&mut self, name: String, ty: ir::Type, param_index: Option<usize>) -> bool {
-        let res = self.symbol_table.register_local(name, ty.clone(), ir::LocalVarId(self.local_counter));
+        let res = self.symbol_table
+            .register_local(name, ty.clone(), ir::LocalVarId(self.local_counter));
         self.locals.push(ir::LocalVar {
             id: ir::LocalVarId(self.local_counter),
             ty: ty,
@@ -683,11 +733,12 @@ impl<'a> FunctionBuilder<'a> {
 
     fn terminate_current(&mut self, terminator: TempTerminator) {
         self.change_terminator(terminator);
-        self.basic_blocks.insert(self.current_bb_index + 1, TempBasicBlock {
-            id: ir::BasicBlockId(self.bb_counter),
-            stmts: Vec::new(),
-            terminator: TempTerminator::Fallthrough
-        });
+        self.basic_blocks.insert(self.current_bb_index + 1,
+                                 TempBasicBlock {
+                                     id: ir::BasicBlockId(self.bb_counter),
+                                     stmts: Vec::new(),
+                                     terminator: TempTerminator::Fallthrough,
+                                 });
         self.current_bb_index += 1;
         self.bb_counter += 1;
     }

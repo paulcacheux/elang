@@ -41,7 +41,7 @@ impl ASTPrinter {
                     println!("ParamDecl '{}'", param.inner);
                 }
                 self.0 -= 1;
-            },
+            }
             Function { ref name, ref params, ref return_ty, ref stmt } => {
                 println!("FunctionDecl '{}' '{}'", name, return_ty.inner);
                 self.0 += 1;
@@ -52,7 +52,7 @@ impl ASTPrinter {
                 }
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
-            },
+            }
         }
     }
 
@@ -76,30 +76,30 @@ impl ASTPrinter {
                 self.0 += 1;
                 self.print_compound_statement(cstmt);
                 self.0 -= 1;
-            },
+            }
             Let { ref name, ref ty, ref expr } => {
-                println!(
-                    "LetStmt '{}' '{}'",
-                    name,
-                    ty.as_ref().map(|ty| ty.inner.to_string()).unwrap_or(String::from("undefined"))
-                );
+                println!("LetStmt '{}' '{}'",
+                         name,
+                         ty.as_ref()
+                             .map(|ty| ty.inner.to_string())
+                             .unwrap_or(String::from("undefined")));
                 self.0 += 1;
                 self.print_expression(expr);
                 self.0 -= 1;
-            },
+            }
             Loop { ref stmt } => {
                 println!("LoopStmt");
                 self.0 += 1;
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
-            },
+            }
             While { ref cond, ref stmt } => {
                 println!("WhileStmt");
                 self.0 += 1;
                 self.print_expression(cond);
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
-            },
+            }
             If { ref if_branch, ref elseif_branches, ref else_branch } => {
                 println!("IfStmt");
                 self.0 += 1;
@@ -129,13 +129,13 @@ impl ASTPrinter {
                 }
 
                 self.0 -= 1;
-            },
+            }
             Break => {
                 println!("BreakStmt");
-            },
+            }
             Continue => {
                 println!("ContinueStmt");
-            },
+            }
             Return { ref expr } => {
                 println!("ReturnStmt");
                 self.0 += 1;
@@ -143,13 +143,13 @@ impl ASTPrinter {
                     self.print_expression(expr);
                 }
                 self.0 -= 1;
-            },
+            }
             Expression { ref expr } => {
                 println!("ExprStmt");
                 self.0 += 1;
                 self.print_expression(expr);
                 self.0 -= 1;
-            },
+            }
         }
     }
 
@@ -165,27 +165,27 @@ impl ASTPrinter {
                 self.print_expression(lhs);
                 self.print_expression(rhs);
                 self.0 -= 1;
-            },
+            }
             Subscript(ref array, ref index) => {
                 println!("SubscriptExpr");
                 self.0 += 1;
                 self.print_expression(array);
                 self.print_expression(index);
                 self.0 -= 1;
-            },
+            }
             BinOp(op, ref lhs, ref rhs) => {
                 println!("BinOpExpr '{:?}'", op);
                 self.0 += 1;
                 self.print_expression(lhs);
                 self.print_expression(rhs);
                 self.0 -= 1;
-            },
+            }
             UnOp(op, ref expr) => {
                 println!("UnOpExpr '{:?}'", op);
                 self.0 += 1;
                 self.print_expression(expr);
                 self.0 -= 1;
-            },
+            }
             FuncCall(ref func, ref args) => {
                 println!("FuncCall");
                 self.0 += 1;
@@ -194,16 +194,16 @@ impl ASTPrinter {
                     self.print_expression(arg);
                 }
                 self.0 -= 1;
-            },
+            }
             Paren(ref expr) => {
                 println!("ParenExpr");
                 self.0 += 1;
                 self.print_expression(expr);
                 self.0 -= 1;
-            },
+            }
             Identifier(ref name) => {
                 println!("Identifier '{}'", name);
-            },
+            }
             Literal(ref lit) => {
                 use self::Literal;
                 match *lit {

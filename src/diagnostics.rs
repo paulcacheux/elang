@@ -24,36 +24,36 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
             ParseError::InvalidToken { location } => {
                 Error {
                     msg: format!("Invalid token."),
-                    lines: get_lines(input, Span(location, location + 1))
+                    lines: get_lines(input, Span(location, location + 1)),
                 }
-            },
+            }
             ParseError::UnrecognizedToken { token, expected } => {
                 let mut error = if let Some((start, tok, end)) = token {
                     Error {
                         msg: format!("Unrecognized token: {:?}.", tok),
-                        lines: get_lines(input, Span(start, end))
+                        lines: get_lines(input, Span(start, end)),
                     }
                 } else {
                     Error {
                         msg: format!("Unexpected eof."),
-                        lines: Vec::new()
+                        lines: Vec::new(),
                     }
                 };
                 if expected.len() != 0 {
                     error.msg.push_str(&format!("Expected one of: {}", expected.join(", ")));
                 }
                 error
-            },
+            }
             ParseError::ExtraToken { token: (start, tok, end) } => {
                 Error {
                     msg: format!("Extra token: {:?}.", tok),
-                    lines: get_lines(input, Span(start, end))
+                    lines: get_lines(input, Span(start, end)),
                 }
-            },
+            }
             ParseError::User { error: LexicalError { msg, pos } } => {
                 Error {
                     msg: msg,
-                    lines: get_lines(input, Span(pos, pos + 1))
+                    lines: get_lines(input, Span(pos, pos + 1)),
                 }
             }
         }
@@ -73,7 +73,7 @@ pub fn print_diagnostic<'a, E: ToError<'a>>(input: &'a str, error: E) {
     let error = error.convert(input);
     println!("{}", error.msg);
     for line in error.lines {
-        println!("{:<5}: {}", line.n+1, line.text);
+        println!("{:<5}: {}", line.n + 1, line.text);
         println!("       {}", line.arrow);
     }
 }
@@ -92,9 +92,13 @@ fn get_lines<'a>(input: &'a str, span: Span) -> Vec<Line> {
     input.lines()
         .zip(arrow.lines().map(String::from))
         .enumerate()
-        .filter(|&(_, (_, ref arrow))| {
-            arrow.contains('^')
+        .filter(|&(_, (_, ref arrow))| arrow.contains('^'))
+        .map(|(n, (t, a))| {
+            Line {
+                n: n,
+                text: t,
+                arrow: a,
+            }
         })
-        .map(|(n, (t, a))| Line { n: n, text: t, arrow: a })
         .collect()
 }

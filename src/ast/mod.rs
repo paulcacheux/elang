@@ -20,7 +20,7 @@ pub enum Declaration {
         params: Vec<(Spanned<String>, Spanned<ParseType>)>,
         return_ty: Spanned<ParseType>,
         stmt: Spanned<CompoundStatement>,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,9 +34,7 @@ pub enum Statement {
         ty: Option<Spanned<ParseType>>,
         expr: Spanned<Expression>,
     },
-    Loop {
-        stmt: Spanned<CompoundStatement>,
-    },
+    Loop { stmt: Spanned<CompoundStatement> },
     While {
         cond: Spanned<Expression>,
         stmt: Spanned<CompoundStatement>,
@@ -48,12 +46,8 @@ pub enum Statement {
     },
     Break,
     Continue,
-    Return {
-        expr: Option<Spanned<Expression>>,
-    },
-    Expression {
-        expr: Spanned<Expression>,
-    },
+    Return { expr: Option<Spanned<Expression>> },
+    Expression { expr: Spanned<Expression> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,7 +67,7 @@ pub enum Literal {
     Int(i64),
     Double(f64),
     Bool(bool),
-    Unit
+    Unit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,13 +102,13 @@ pub struct Spanned<T> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Span (pub usize, pub usize);
+pub struct Span(pub usize, pub usize);
 
 impl<T> Spanned<T> {
     pub fn new(inner: T, span: Span) -> Self {
         Spanned {
             inner: inner,
-            span: span
+            span: span,
         }
     }
 }

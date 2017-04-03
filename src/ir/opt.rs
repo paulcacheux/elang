@@ -9,7 +9,7 @@ pub fn opt_translation_unit(tu: &mut ir::TranslationUnit) {
 
 fn opt_declaration(decl: &mut ir::Declaration) {
     match *decl {
-        ir::Declaration::ExternFunction { .. } => {},
+        ir::Declaration::ExternFunction { .. } => {}
         ir::Declaration::Function { ref mut bbs, .. } => {
             opt_basic_blocks(bbs);
         }
@@ -17,10 +17,7 @@ fn opt_declaration(decl: &mut ir::Declaration) {
 }
 
 fn opt_basic_blocks(bbs: &mut Vec<ir::BasicBlock>) {
-    let opts = [
-        branch_inliner,
-        branch_remover
-    ];
+    let opts = [branch_inliner, branch_remover];
 
     for opt in opts.into_iter() {
         opt(bbs);
@@ -57,7 +54,7 @@ fn branch_inliner(bbs: &mut Vec<ir::BasicBlock>) {
             ir::Terminator::BrCond(_, ref mut id1, ref mut id2) => {
                 updater(id1, &directs);
                 updater(id2, &directs);
-            },
+            }
             _ => {}
         }
     }
@@ -68,12 +65,14 @@ fn branch_remover(bbs: &mut Vec<ir::BasicBlock>) {
     for bb in bbs.iter() {
         let succ_list = succs.entry(bb.id).or_insert(Vec::new());
         match bb.terminator {
-            ir::Terminator::Br(id) => { succ_list.push(id); },
-            ir::Terminator::Ret(_) => {},
+            ir::Terminator::Br(id) => {
+                succ_list.push(id);
+            }
+            ir::Terminator::Ret(_) => {}
             ir::Terminator::BrCond(_, id1, id2) => {
                 succ_list.push(id1);
                 succ_list.push(id2)
-            },
+            }
         }
     }
 

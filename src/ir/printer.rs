@@ -10,7 +10,7 @@ fn print_declaration(decl: &Declaration) {
     match *decl {
         Declaration::ExternFunction { ref name, ref ty } => {
             println!("extern @{} {}\n", name, ty);
-        },
+        }
         Declaration::Function { ref name, ref ty, ref locals, ref bbs } => {
             println!("declare @{} {} {{", name, ty);
 
@@ -78,19 +78,19 @@ fn print_expr(expr: &Expression) {
             print!(", ");
             print_value(rhs);
             print!(")");
-        },
+        }
         Expression::UnOp(op, ref val) => {
             print!("unop({:?}, ", op);
             print_value(val);
             print!(")");
-        },
+        }
         Expression::ReadArray(ref array, ref index) => {
             print!("readarray(");
             print_value(array);
             print!(", ");
             print_value(index);
             print!(")");
-        },
+        }
         Expression::FuncCall(ref func, ref params) => {
             print!("call ");
             print_value(func);
@@ -100,7 +100,7 @@ fn print_expr(expr: &Expression) {
                 print!(", ");
             }
             print!(")")
-        },
+        }
         Expression::Literal(ref lit) => {
             match *lit {
                 ast::Literal::Int(val) => print!("IntLit '{}'", val),
@@ -108,7 +108,7 @@ fn print_expr(expr: &Expression) {
                 ast::Literal::Bool(val) => print!("BoolLit '{:?}'", val),
                 ast::Literal::Unit => print!("UnitLit"),
             }
-        },
+        }
     }
 }
 
