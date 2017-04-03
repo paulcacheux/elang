@@ -115,10 +115,10 @@ fn build_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolT
             let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
             function_builder.symbol_table.start_local_scope();
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
-                if !function_builder.register_param(name.clone(), ty, Some(index)) {
+                if !function_builder.register_param(name.inner.clone(), ty, Some(index)) {
                     return Err(SyntaxError {
-                        msg: format!("'{}' is already defined.", name),
-                        span: decl.span,
+                        msg: format!("'{}' is already defined.", name.inner),
+                        span: name.span,
                     })
                 }
             }
@@ -206,6 +206,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             Ok(())
         },
         ast::Statement::While { cond, stmt } => {
+            let error_span = cond.span;
             let continue_id = fb.bb_counter;
             fb.terminate_current(TempTerminator::Fallthrough);
             let cond_index = fb.current_bb_index;
@@ -221,8 +222,8 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             if cond_value.ty != ir::Type::Bool {
                 return Err(SyntaxError {
-                    msg: format!("Condititoon type must be bool."),
-                    span: stmt.span,
+                    msg: format!("Condition type must be bool."),
+                    span: error_span,
                 })
             }
 
@@ -244,13 +245,14 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
 
             fb.symbol_table.start_local_scope();
             for branch in branches {
+                let error_span = branch.0.span;
                 fb.terminate_current(TempTerminator::Fallthrough);
                 let cond_value = build_expression(fb, branch.0)?;
 
                 if cond_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
                         msg: format!("Condititoon type must be bool."),
-                        span: stmt.span,
+                        span: error_span,
                     })
                 }
 
@@ -312,14 +314,15 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             }
         }
         ast::Statement::Return { expr } => {
-            let value = if let Some(expr) = expr {
+            let (value, error_span) = if let Some(expr) = expr {
+                let error_span = expr.span;
                 let value = build_expression(fb, expr)?;
                 let value = build_lvalue_to_rvalue(fb, value);
-                value
+                (value, error_span)
             } else {
                 let value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Unit };
                 fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
-                value
+                (value, stmt.span)
             };
 
             if value.ty == *fb.ty.return_ty {
@@ -328,7 +331,7 @@ fn build_statement(fb: &mut FunctionBuilder, stmt: Spanned<ast::Statement>) -> R
             } else {
                 Err(SyntaxError {
                     msg: format!("Mismatching return type."),
-                    span: stmt.span
+                    span: error_span
                 })
             }
         }
@@ -352,7 +355,7 @@ fn build_expression(fb: &mut FunctionBuilder, expr: Spanned<ast::Expression>) ->
                     Ok(rhs_value)
                 } else {
                     Err(SyntaxError {
-                        msg: format!("Mismtach assignment."),
+                        msg: format!("Mismatching type in assignment."),
                         span: expr.span,
                     })
                 }

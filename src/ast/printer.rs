@@ -47,7 +47,8 @@ impl ASTPrinter {
                 self.0 += 1;
                 for param in params {
                     self.print_tab();
-                    println!("ParamDecl '{}':'{}'", param.0, param.1.inner);
+                    self.print_span(&param.0.span);
+                    println!("ParamDecl '{}':'{}'", param.0.inner, param.1.inner);
                 }
                 self.print_compound_statement(stmt);
                 self.0 -= 1;

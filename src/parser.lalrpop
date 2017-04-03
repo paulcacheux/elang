@@ -31,8 +31,8 @@ FuncDecl: Declaration = {
     }
 };
 
-ParamDecl: (String, Spanned<ParseType>) = {
-    <Identifier> ":" <Spanned<Type>> => (<>)
+ParamDecl: (Spanned<String>, Spanned<ParseType>) = {
+    <id: Spanned<Identifier>> ":" <ty: Spanned<Type>> => { (id, ty) }
 };
 
 Statement: Spanned<Statement> = {

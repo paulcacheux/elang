@@ -17,7 +17,7 @@ pub enum Declaration {
     },
     Function {
         name: String,
-        params: Vec<(String, Spanned<ParseType>)>,
+        params: Vec<(Spanned<String>, Spanned<ParseType>)>,
         return_ty: Spanned<ParseType>,
         stmt: Spanned<CompoundStatement>,
     }
