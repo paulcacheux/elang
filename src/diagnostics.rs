@@ -40,7 +40,9 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
                     }
                 };
                 if expected.len() != 0 {
-                    error.msg.push_str(&format!("Expected one of: {}", expected.join(", ")));
+                    error
+                        .msg
+                        .push_str(&format!("Expected one of: {}", expected.join(", ")));
                 }
                 error
             }
@@ -83,22 +85,23 @@ fn get_lines<'a>(input: &'a str, span: Span) -> Vec<Line> {
 
     for (i, c) in input.chars().enumerate() {
         arrow.push(match c {
-            '\n' => '\n',
-            _ if span.0 <= i && i < span.1 => '^',
-            _ => ' ',
-        });
+                       '\n' => '\n',
+                       _ if span.0 <= i && i < span.1 => '^',
+                       _ => ' ',
+                   });
     }
 
-    input.lines()
+    input
+        .lines()
         .zip(arrow.lines().map(String::from))
         .enumerate()
         .filter(|&(_, (_, ref arrow))| arrow.contains('^'))
         .map(|(n, (t, a))| {
-            Line {
-                n: n,
-                text: t,
-                arrow: a,
-            }
-        })
+                 Line {
+                     n: n,
+                     text: t,
+                     arrow: a,
+                 }
+             })
         .collect()
 }

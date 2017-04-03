@@ -36,7 +36,11 @@ impl SymbolTable {
 
     fn register_local(&mut self, name: String, ty: ir::Type, id: ir::LocalVarId) -> bool {
         // return false if already on scope
-        self.locals.last_mut().unwrap().insert(name, (id, ty)).is_none()
+        self.locals
+            .last_mut()
+            .unwrap()
+            .insert(name, (id, ty))
+            .is_none()
     }
 
     fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
@@ -74,7 +78,11 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                      symbol_table: &mut SymbolTable)
                      -> Result<ir::Declaration, SyntaxError> {
     match decl.inner {
-        ast::Declaration::ExternFunction { name, params, return_ty } => {
+        ast::Declaration::ExternFunction {
+            name,
+            params,
+            return_ty,
+        } => {
             let return_ty = build_type(return_ty)?;
 
             let mut param_types = Vec::with_capacity(params.len());
@@ -89,17 +97,19 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
-                    msg: format!("'{}' function is already defined.", name),
-                    span: decl.span,
-                });
+                               msg: format!("'{}' function is already defined.", name),
+                               span: decl.span,
+                           });
             }
 
-            Ok(ir::Declaration::ExternFunction {
-                name: name,
-                ty: ty,
-            })
+            Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
         }
-        ast::Declaration::Function { name, params, return_ty, stmt } => {
+        ast::Declaration::Function {
+            name,
+            params,
+            return_ty,
+            stmt,
+        } => {
             let return_ty = build_type(return_ty)?;
 
             let mut param_names = Vec::with_capacity(params.len());
@@ -116,9 +126,9 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
-                    msg: format!("'{}' function is already defined.", name),
-                    span: decl.span,
-                });
+                               msg: format!("'{}' function is already defined.", name),
+                               span: decl.span,
+                           });
             }
 
             let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
@@ -126,9 +136,9 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
                 if !function_builder.register_param(name.inner.clone(), ty, Some(index)) {
                     return Err(SyntaxError {
-                        msg: format!("'{}' is already defined.", name.inner),
-                        span: name.span,
-                    });
+                                   msg: format!("'{}' is already defined.", name.inner),
+                                   span: name.span,
+                               });
                 }
             }
 
@@ -187,9 +197,9 @@ fn build_statement(fb: &mut FunctionBuilder,
             if ty == expr_value.ty {
                 if !fb.register_local_variable(name.clone(), ty.clone()) {
                     return Err(SyntaxError {
-                        msg: format!("'{}' is already defined in this scope.", name),
-                        span: stmt.span,
-                    });
+                                   msg: format!("'{}' is already defined in this scope.", name),
+                                   span: stmt.span,
+                               });
                 }
 
                 let (_, lval_expr) = fb.symbol_table.get_var(&name).unwrap(); //TODO optimize
@@ -202,9 +212,9 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                    msg: format!("Mismatching assignment types."),
-                    span: stmt.span,
-                })
+                        msg: format!("Mismatching assignment types."),
+                        span: stmt.span,
+                    })
             }
         }
         ast::Statement::Loop { stmt } => {
@@ -242,9 +252,9 @@ fn build_statement(fb: &mut FunctionBuilder,
 
             if cond_value.ty != ir::Type::Bool {
                 return Err(SyntaxError {
-                    msg: format!("Condition type must be bool."),
-                    span: error_span,
-                });
+                               msg: format!("Condition type must be bool."),
+                               span: error_span,
+                           });
             }
 
             fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(break_id)));
@@ -260,7 +270,11 @@ fn build_statement(fb: &mut FunctionBuilder,
             fb.cursor_to_end();
             Ok(())
         }
-        ast::Statement::If { if_branch, elseif_branches, else_branch } => {
+        ast::Statement::If {
+            if_branch,
+            elseif_branches,
+            else_branch,
+        } => {
             let branches = vec![if_branch].into_iter().chain(elseif_branches);
             let mut finalizer_indexes = Vec::new();
 
@@ -272,9 +286,9 @@ fn build_statement(fb: &mut FunctionBuilder,
 
                 if cond_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                        msg: format!("Condititoon type must be bool."),
-                        span: error_span,
-                    });
+                                   msg: format!("Condititoon type must be bool."),
+                                   span: error_span,
+                               });
                 }
 
                 let cond_index = fb.current_bb_index;
@@ -318,9 +332,9 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                    msg: format!("Break outside loop."),
-                    span: stmt.span,
-                })
+                        msg: format!("Break outside loop."),
+                        span: stmt.span,
+                    })
             }
         }
         ast::Statement::Continue => {
@@ -329,9 +343,9 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                    msg: format!("Continue outside loop."),
-                    span: stmt.span,
-                })
+                        msg: format!("Continue outside loop."),
+                        span: stmt.span,
+                    })
             }
         }
         ast::Statement::Return { expr } => {
@@ -354,9 +368,9 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                    msg: format!("Mismatching return type."),
-                    span: error_span,
-                })
+                        msg: format!("Mismatching return type."),
+                        span: error_span,
+                    })
             }
         }
         ast::Statement::Expression { expr } => {
@@ -381,15 +395,15 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(rhs_value)
                 } else {
                     Err(SyntaxError {
-                        msg: format!("Mismatching type in assignment."),
-                        span: expr.span,
-                    })
+                            msg: format!("Mismatching type in assignment."),
+                            span: expr.span,
+                        })
                 }
             } else {
                 Err(SyntaxError {
-                    msg: format!("Can't assign to a non-lvalue."),
-                    span: expr.span,
-                })
+                        msg: format!("Can't assign to a non-lvalue."),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::Subscript(array, index) => {
@@ -404,19 +418,21 @@ fn build_expression(fb: &mut FunctionBuilder,
                         id: fb.new_temp_id(),
                         ty: ir::Type::LValue(sub),
                     };
-                    fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::ReadArray(array_value, index_value)));
+                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                                                           ir::Expression::ReadArray(array_value,
+                                                                                     index_value)));
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                        msg: format!("Index must be of int type."),
-                        span: expr.span,
-                    })
+                            msg: format!("Index must be of int type."),
+                            span: expr.span,
+                        })
                 }
             } else {
                 Err(SyntaxError {
-                    msg: format!("Subscript to a non-array."),
-                    span: expr.span,
-                })
+                        msg: format!("Subscript to a non-array."),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::BinOp(code, lhs, rhs) => {
@@ -438,9 +454,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                    msg: format!("Operation mismatching for those types."),
-                    span: expr.span,
-                })
+                        msg: format!("Operation mismatching for those types."),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::UnOp(code, sub) => {
@@ -458,9 +474,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                    msg: format!("Operation mismatching for those types."),
-                    span: expr.span,
-                })
+                        msg: format!("Operation mismatching for those types."),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::FuncCall(func, params) => {
@@ -483,24 +499,21 @@ fn build_expression(fb: &mut FunctionBuilder,
                         id: fb.new_temp_id(),
                         ty: *func_ty.return_ty,
                     };
-                    fb.add_statement(
-                        ir::Statement::Assign(
-                            value.clone(),
-                            ir::Expression::FuncCall(func_value, param_values)
-                        )
-                    );
+                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                                                           ir::Expression::FuncCall(func_value,
+                                                                                    param_values)));
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                        msg: format!("Mismatching params."),
-                        span: expr.span,
-                    })
+                            msg: format!("Mismatching params."),
+                            span: expr.span,
+                        })
                 }
             } else {
                 Err(SyntaxError {
-                    msg: format!("Not callable."),
-                    span: expr.span,
-                })
+                        msg: format!("Not callable."),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
@@ -514,9 +527,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                    msg: format!("'{}' is not defined here.", id),
-                    span: expr.span,
-                })
+                        msg: format!("'{}' is not defined here.", id),
+                        span: expr.span,
+                    })
             }
         }
         ast::Expression::Literal(lit) => {
@@ -560,9 +573,9 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "bool" => Ok(ir::Type::Bool),
                 other => {
                     Err(SyntaxError {
-                        msg: format!("Unrecognized type '{}'.", other),
-                        span: parse_ty.span,
-                    })
+                            msg: format!("Unrecognized type '{}'.", other),
+                            span: parse_ty.span,
+                        })
                 }
             }
         }
@@ -661,9 +674,9 @@ impl<'a> FunctionBuilder<'a> {
             TempTerminator::Fallthrough |
             TempTerminator::Jz(_, _) => {
                 return Err(SyntaxError {
-                    msg: format!("Not all paths return."),
-                    span: span,
-                })
+                               msg: format!("Not all paths return."),
+                               span: span,
+                           })
             }
             _ => return Ok(()),
         }
@@ -683,10 +696,10 @@ impl<'a> FunctionBuilder<'a> {
             };
 
             bbs.push(ir::BasicBlock {
-                id: self.basic_blocks[i].id,
-                stmts: self.basic_blocks[i].stmts.clone(),
-                terminator: term,
-            })
+                         id: self.basic_blocks[i].id,
+                         stmts: self.basic_blocks[i].stmts.clone(),
+                         terminator: term,
+                     })
         }
 
         ir::Declaration::Function {
@@ -706,11 +719,12 @@ impl<'a> FunctionBuilder<'a> {
     fn register_param(&mut self, name: String, ty: ir::Type, param_index: Option<usize>) -> bool {
         let res = self.symbol_table
             .register_local(name, ty.clone(), ir::LocalVarId(self.local_counter));
-        self.locals.push(ir::LocalVar {
-            id: ir::LocalVarId(self.local_counter),
-            ty: ty,
-            param_index: param_index,
-        });
+        self.locals
+            .push(ir::LocalVar {
+                      id: ir::LocalVarId(self.local_counter),
+                      ty: ty,
+                      param_index: param_index,
+                  });
         self.local_counter += 1;
         res
     }
@@ -733,12 +747,13 @@ impl<'a> FunctionBuilder<'a> {
 
     fn terminate_current(&mut self, terminator: TempTerminator) {
         self.change_terminator(terminator);
-        self.basic_blocks.insert(self.current_bb_index + 1,
-                                 TempBasicBlock {
-                                     id: ir::BasicBlockId(self.bb_counter),
-                                     stmts: Vec::new(),
-                                     terminator: TempTerminator::Fallthrough,
-                                 });
+        self.basic_blocks
+            .insert(self.current_bb_index + 1,
+                    TempBasicBlock {
+                        id: ir::BasicBlockId(self.bb_counter),
+                        stmts: Vec::new(),
+                        terminator: TempTerminator::Fallthrough,
+                    });
         self.current_bb_index += 1;
         self.bb_counter += 1;
     }

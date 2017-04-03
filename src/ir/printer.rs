@@ -11,7 +11,12 @@ fn print_declaration(decl: &Declaration) {
         Declaration::ExternFunction { ref name, ref ty } => {
             println!("extern @{} {}\n", name, ty);
         }
-        Declaration::Function { ref name, ref ty, ref locals, ref bbs } => {
+        Declaration::Function {
+            ref name,
+            ref ty,
+            ref locals,
+            ref bbs,
+        } => {
             println!("declare @{} {} {{", name, ty);
 
             for local in locals {

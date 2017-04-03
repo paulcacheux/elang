@@ -33,7 +33,11 @@ impl ASTPrinter {
 
         use self::Declaration::*;
         match decl.inner {
-            ExternFunction { ref name, ref params, ref return_ty } => {
+            ExternFunction {
+                ref name,
+                ref params,
+                ref return_ty,
+            } => {
                 println!("ExternFunctionDecl '{}' '{}'", name, return_ty.inner);
                 self.0 += 1;
                 for param in params {
@@ -42,7 +46,12 @@ impl ASTPrinter {
                 }
                 self.0 -= 1;
             }
-            Function { ref name, ref params, ref return_ty, ref stmt } => {
+            Function {
+                ref name,
+                ref params,
+                ref return_ty,
+                ref stmt,
+            } => {
                 println!("FunctionDecl '{}' '{}'", name, return_ty.inner);
                 self.0 += 1;
                 for param in params {
@@ -77,7 +86,11 @@ impl ASTPrinter {
                 self.print_compound_statement(cstmt);
                 self.0 -= 1;
             }
-            Let { ref name, ref ty, ref expr } => {
+            Let {
+                ref name,
+                ref ty,
+                ref expr,
+            } => {
                 println!("LetStmt '{}' '{}'",
                          name,
                          ty.as_ref()
@@ -100,7 +113,11 @@ impl ASTPrinter {
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
             }
-            If { ref if_branch, ref elseif_branches, ref else_branch } => {
+            If {
+                ref if_branch,
+                ref elseif_branches,
+                ref else_branch,
+            } => {
                 println!("IfStmt");
                 self.0 += 1;
 
