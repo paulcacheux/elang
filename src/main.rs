@@ -22,56 +22,6 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(buffer)
 }
 
-fn remove_comments(input: String) -> String {
-    enum State {
-        Main,
-        OneSlash,
-        LineComment,
-        MultiStar(usize),
-        MultiSlash(usize),
-        MultiComment(usize),
-    }
-
-    let mut output = String::with_capacity(input.len());
-
-    let mut state = State::Main;
-    for c in input.chars() {
-        state = match (state, c) {
-            (State::Main, '/') => State::OneSlash,
-            (State::OneSlash, '/') => State::LineComment,
-            (State::OneSlash, '*') => State::MultiComment(0),
-            (State::OneSlash, c) => {
-                output.push('/');
-                output.push(c);
-                State::Main
-            }
-            (State::LineComment, '\n') => {
-                output.push('\n');
-                State::Main
-            },
-            (State::LineComment, _) => State::LineComment,
-            (State::MultiComment(n), '*') => State::MultiStar(n),
-            (State::MultiComment(n), '/') => State::MultiSlash(n),
-            (State::MultiComment(n), _) => State::MultiComment(n),
-            (State::MultiSlash(n), '*') => State::MultiComment(n + 1),
-            (State::MultiSlash(n), '/') => State::MultiSlash(n),
-            (State::MultiSlash(n), _) => State::MultiComment(n),
-            (State::MultiStar(n), '/') if n == 0 => State::Main,
-            (State::MultiStar(n), '/') => State::MultiComment(n - 1),
-            (State::MultiStar(n), c) => {
-                output.push('*');
-                output.push(c);
-                State::MultiComment(n)
-            }
-            (State::Main, c) => {
-                output.push(c);
-                State::Main
-            }
-        }
-    }
-    output
-}
-
 fn main() {
     let matches = App::new("Elang Compiler")
         .version("0.1")
@@ -92,7 +42,6 @@ fn main() {
         .get_matches();
 
     let input = read_file(matches.value_of("INPUT").unwrap()).expect("Can't read input file");
-    let input = remove_comments(input);
     let lex = lexer::Lexer::new(&input);
     let tu = match parser::parse_TranslationUnit(lex) {
         Ok(tu) => tu,

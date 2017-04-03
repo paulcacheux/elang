@@ -80,8 +80,14 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Result<(usize, Token, usize), LexicalError>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let mut in_comment = false;
         while let Some(&(_, c)) = self.chars.peek() {
-            if !c.is_whitespace() {
+            if in_comment && c == '\n' {
+                in_comment = false;
+            } else if in_comment {
+            } else if c == '#' {
+                in_comment = true;
+            } else if !c.is_whitespace() {
                 break
             }
             self.chars.next();
