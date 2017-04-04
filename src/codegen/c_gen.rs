@@ -149,7 +149,7 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
                 ast::Literal::Int(val) => write!(f, "{}", val),
                 ast::Literal::Double(val) => write!(f, "{}", val),
                 ast::Literal::Bool(val) => write!(f, "{}", if val { 1 } else { 0 }),
-                ast::Literal::Unit => write!(f, "void"),
+                ast::Literal::Unit => Ok(()),
             }
         }
     }
@@ -169,7 +169,7 @@ fn gen_terminator<F: Write>(f: &mut F, term: ir::Terminator) -> io::Result<()> {
             if value.ty != ir::Type::Unit {
                 writeln!(f, "\treturn temp_{};", value.id)
             } else {
-                writeln!(f, "\t return;")
+                writeln!(f, "\treturn;")
             }
         },
     }
