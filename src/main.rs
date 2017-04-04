@@ -73,8 +73,11 @@ fn main() {
         ir::printer::print_ir(&tu);
     }
 
-    let default_output_path = format!("{}.c", input_path);
-    let output_path = matches.value_of("OUTPUT").unwrap_or(&default_output_path);
-    let mut file = File::create(output_path).unwrap();
-    codegen::c_gen::gen_translation_unit(&mut file, tu).expect("error gen");
+    let mut output_writer: Box<std::io::Write> = if let Some(output_path) = matches.value_of("OUTPUT") {
+        Box::new(File::create(output_path).unwrap())
+    } else {
+        Box::new(std::io::stdout())
+    };
+
+    codegen::c_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
 }
