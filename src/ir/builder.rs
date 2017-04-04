@@ -436,27 +436,145 @@ fn build_expression(fb: &mut FunctionBuilder,
             }
         }
         ast::Expression::BinOp(code, lhs, rhs) => {
-            let lhs_value = build_expression(fb, *lhs)?;
-            let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
-            let rhs_value = build_expression(fb, *rhs)?;
-            let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
-
-            if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
-                let value = ir::Value {
-                    id: fb.new_temp_id(),
-                    ty: ty,
-                };
-
-                fb.add_statement(ir::Statement::Assign(value.clone(),
-                                                       ir::Expression::BinOp(op,
-                                                                             lhs_value,
-                                                                             rhs_value)));
-                Ok(value)
-            } else {
-                Err(SyntaxError {
+            if code == ast::BinOpCode::LogicalAnd {
+                let logical_local_id = fb.register_local_logical();
+                let lhs_value = build_expression(fb, *lhs)?;
+                let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+                if lhs_value.ty != ir::Type::Bool {
+                    return Err(SyntaxError {
                         msg: format!("Operation mismatching for those types."),
                         span: expr.span,
                     })
+                }
+                let check_index = fb.current_bb_index;
+                fb.terminate_current(TempTerminator::Fallthrough);
+                let true_index = fb.current_bb_index;
+                let rhs_value = build_expression(fb, *rhs)?;
+                let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+
+                if rhs_value.ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("Operation mismatching for those types."),
+                        span: expr.span,
+                    })
+                }
+
+                let final_value1 = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(final_value1.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.add_statement(ir::Statement::LValueSet(final_value1, rhs_value));
+
+                let false_id = fb.bb_counter;
+                fb.terminate_current(TempTerminator::Fallthrough);
+                let false_index = fb.current_bb_index;
+                let false_value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Bool };
+                fb.add_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ast::Literal::Bool(false))));
+                let final_value2 = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.add_statement(ir::Statement::LValueSet(final_value2, false_value));
+
+                let final_id = fb.bb_counter;
+                fb.terminate_current(TempTerminator::Fallthrough);
+                let final_index = fb.current_bb_index;
+
+                let return_lvalue = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                let return_value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Bool };
+                fb.add_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
+
+                fb.current_bb_index = check_index;
+                fb.change_terminator(TempTerminator::Jz(lhs_value, ir::BasicBlockId(false_id)));
+
+                fb.current_bb_index = true_index;
+                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
+
+                fb.current_bb_index = false_index;
+                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
+
+                fb.current_bb_index = final_index;
+
+                Ok(return_value)
+            } else if code == ast::BinOpCode::LogicalOr {
+                let logical_local_id = fb.register_local_logical();
+                let lhs_value = build_expression(fb, *lhs)?;
+                let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+                if lhs_value.ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("Operation mismatching for those types."),
+                        span: expr.span,
+                    })
+                }
+                let check_index = fb.current_bb_index;
+                fb.terminate_current(TempTerminator::Fallthrough);
+
+                let true_index = fb.current_bb_index;
+                let true_value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Bool };
+                fb.add_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ast::Literal::Bool(true))));
+                let final_value2 = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.add_statement(ir::Statement::LValueSet(final_value2, true_value));
+
+                let false_id = fb.bb_counter;
+                fb.terminate_current(TempTerminator::Fallthrough);
+                let false_index = fb.current_bb_index;
+                let rhs_value = build_expression(fb, *rhs)?;
+                let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+
+                if rhs_value.ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("Operation mismatching for those types."),
+                        span: expr.span,
+                    })
+                }
+
+                let final_value1 = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(final_value1.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.add_statement(ir::Statement::LValueSet(final_value1, rhs_value));
+
+
+                let final_id = fb.bb_counter;
+                fb.terminate_current(TempTerminator::Fallthrough);
+                let final_index = fb.current_bb_index;
+
+                let return_lvalue = ir::Value { id: fb.new_temp_id(), ty: ir::Type::LValue(Box::new(ir::Type::Bool)) };
+                fb.add_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                let return_value = ir::Value { id: fb.new_temp_id(), ty: ir::Type::Bool };
+                fb.add_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
+
+                fb.current_bb_index = check_index;
+                fb.change_terminator(TempTerminator::Jz(lhs_value, ir::BasicBlockId(false_id)));
+
+                fb.current_bb_index = true_index;
+                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
+
+                fb.current_bb_index = false_index;
+                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
+
+                fb.current_bb_index = final_index;
+
+                Ok(return_value)
+            } else {
+                let lhs_value = build_expression(fb, *lhs)?;
+                let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+                let rhs_value = build_expression(fb, *rhs)?;
+                let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+
+                if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
+                    let value = ir::Value {
+                        id: fb.new_temp_id(),
+                        ty: ty,
+                    };
+
+                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                                                           ir::Expression::BinOp(op,
+                                                                                 lhs_value,
+                                                                                 rhs_value)));
+                    Ok(value)
+                } else {
+                    Err(SyntaxError {
+                            msg: format!("Operation mismatching for those types."),
+                            span: expr.span,
+                        })
+                }
             }
         }
         ast::Expression::UnOp(code, sub) => {
@@ -731,6 +849,18 @@ impl<'a> FunctionBuilder<'a> {
 
     fn register_local_variable(&mut self, name: String, ty: ir::Type) -> bool {
         self.register_param(name, ty, None)
+    }
+
+    fn register_local_logical(&mut self) -> ir::LocalVarId {
+        let id = self.local_counter;
+        self.locals
+            .push(ir::LocalVar {
+                      id: ir::LocalVarId(id),
+                      ty: ir::Type::Bool,
+                      param_index: None,
+                  });
+        self.local_counter += 1;
+        ir::LocalVarId(id)
     }
 
     fn cursor_to_end(&mut self) {
