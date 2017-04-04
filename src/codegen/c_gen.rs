@@ -182,7 +182,7 @@ fn type_to_string_with_name(ty: ir::Type, name: String) -> String {
         ir::Type::Int => format!("int {}", name),
         ir::Type::Double => format!("double {}", name),
         ir::Type::LValue(sub) => format!("{} *{}", type_to_string(*sub), name),
-        ir::Type::Array(sub) => format!("{} {}[]", type_to_string(*sub), name),
+        ir::Type::Array(sub, size) => format!("{} {}[{}]", type_to_string(*sub), name, size),
         ir::Type::Ptr(sub) => format!("{} *{}", type_to_string(*sub), name),
         ir::Type::Function(func) => {
             format!("{}(*{})({})",
@@ -203,7 +203,7 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Int => format!("int"),
         ir::Type::Double => format!("double"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
-        ir::Type::Array(sub) => format!("{}[]", type_to_string(*sub)),
+        ir::Type::Array(sub, size) => format!("{}[{}]", type_to_string(*sub), size),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {
             format!("{}(*)({})",

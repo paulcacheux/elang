@@ -231,7 +231,7 @@ UnOp: UnOpCode = {
 Type: ParseType = {
     Identifier => ParseType::Lit(<>),
     "*" <Spanned<Type>> => ParseType::Ptr(Box::new(<>)),
-    "[" <Spanned<Type>> "]" => ParseType::Array(Box::new(<>)),
+    "[" <ty:Spanned<Type>> ";" <size:IntLiteral> "]" => ParseType::Array(Box::new(ty), size as usize),
     "(" ")" => ParseType::Unit,
 };
 

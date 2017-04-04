@@ -403,7 +403,7 @@ fn build_expression(fb: &mut FunctionBuilder,
             let index_value = build_expression(fb, *index)?;
             let index_value = build_lvalue_to_rvalue(fb, index_value);
 
-            if let ir::Type::Array(sub) = array_value.ty.clone() {
+            if let ir::Type::Array(sub, _) = array_value.ty.clone() {
                 if ir::Type::Int == index_value.ty {
                     let value = fb.new_temp_value(ir::Type::LValue(sub));
                     fb.add_statement(ir::Statement::Assign(value.clone(),
@@ -653,7 +653,7 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
 fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError> {
     match parse_ty.inner {
         ast::ParseType::Unit => Ok(ir::Type::Unit),
-        ast::ParseType::Array(sub) => Ok(ir::Type::Array(Box::new(build_type(*sub)?))),
+        ast::ParseType::Array(sub, size) => Ok(ir::Type::Array(Box::new(build_type(*sub)?), size)),
         ast::ParseType::Ptr(sub) => Ok(ir::Type::Ptr(Box::new(build_type(*sub)?))),
         ast::ParseType::Lit(lit) => {
             match lit.as_str() {

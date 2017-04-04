@@ -124,7 +124,7 @@ pub enum Type {
     Int,
     Double,
     LValue(Box<Type>),
-    Array(Box<Type>),
+    Array(Box<Type>, usize),
     Ptr(Box<Type>),
     Function(FunctionType),
 }
@@ -143,7 +143,7 @@ impl fmt::Display for Type {
             Type::Int => write!(f, "int"),
             Type::Double => write!(f, "double"),
             Type::LValue(ref sub) => write!(f, "&{}", *sub),
-            Type::Array(ref sub) => write!(f, "[{}]", *sub),
+            Type::Array(ref sub, size) => write!(f, "[{}; {}]", *sub, size),
             Type::Ptr(ref sub) => write!(f, "*{}", *sub),
             Type::Function(ref func) => write!(f, "{}", func),
         }
