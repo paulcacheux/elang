@@ -436,9 +436,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                 }
                 let check_index = fb.current_bb_index;
                 fb.terminate_current(TempTerminator::Fallthrough);
-                let true_index = fb.current_bb_index;
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+                let true_index = fb.current_bb_index;
 
                 if rhs_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
@@ -503,9 +503,9 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 let false_id = fb.bb_counter;
                 fb.terminate_current(TempTerminator::Fallthrough);
-                let false_index = fb.current_bb_index;
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+                let false_index = fb.current_bb_index;
 
                 if rhs_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
