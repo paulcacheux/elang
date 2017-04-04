@@ -36,9 +36,16 @@ fn main() {
                  .help("Input file")
                  .required(true)
                  .index(1))
+        .arg(Arg::with_name("OUTPUT")
+                 .help("Output file")
+                 .long("output")
+                 .short("o")
+                 .value_name("FILE")
+                 .takes_value(true))
         .get_matches();
 
-    let input = read_file(matches.value_of("INPUT").unwrap()).expect("Can't read input file");
+    let input_path = matches.value_of("INPUT").unwrap();
+    let input = read_file(input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let tu = match parser::parse_TranslationUnit(lex) {
         Ok(tu) => tu,
@@ -66,7 +73,8 @@ fn main() {
         ir::printer::print_ir(&tu);
     }
 
-    let output = "elang_examples/OUTPUT.c";
-    let mut file = File::create(output).unwrap();
+    let default_output_path = format!("{}.c", input_path);
+    let output_path = matches.value_of("OUTPUT").unwrap_or(&default_output_path);
+    let mut file = File::create(output_path).unwrap();
     codegen::c_gen::gen_translation_unit(&mut file, tu).expect("error gen");
 }
