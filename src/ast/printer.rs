@@ -230,6 +230,20 @@ impl ASTPrinter {
                     Literal::Unit => println!("UnitLit"),
                 }
             }
+            ArrayFullLiteral(ref values) => {
+                println!("ArrayFullLiteral");
+                self.0 += 1;
+                for expr in values {
+                    self.print_expression(&expr);
+                }
+                self.0 -= 1;
+            }
+            ArrayDefaultLiteral(ref def, size) => {
+                println!("ArrayDefaultLiteral (size: {})", size);
+                self.0 += 1;
+                self.print_expression(def);
+                self.0 -= 1;
+            }
         }
     }
 }

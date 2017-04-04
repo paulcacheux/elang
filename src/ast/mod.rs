@@ -60,6 +60,8 @@ pub enum Expression {
     Paren(Box<Spanned<Expression>>),
     Identifier(String),
     Literal(Literal),
+    ArrayFullLiteral(Vec<Spanned<Expression>>),
+    ArrayDefaultLiteral(Box<Spanned<Expression>>, usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]

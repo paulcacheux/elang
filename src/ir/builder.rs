@@ -637,6 +637,12 @@ fn build_expression(fb: &mut FunctionBuilder,
             fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
             Ok(value)
         }
+        ast::Expression::ArrayFullLiteral(_) => {
+            unimplemented!()
+        }
+        ast::Expression::ArrayDefaultLiteral(_, _) => {
+            unimplemented!()
+        }
     }
 }
 

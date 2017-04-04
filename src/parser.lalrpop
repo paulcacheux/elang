@@ -219,6 +219,12 @@ Term: Expression = {
     BoolLiteral => Expression::Literal(Literal::Bool(<>)),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
+    ArrayLiteral,
+};
+
+ArrayLiteral: Expression = {
+    "[" <Comma<Expr>> "]" => Expression::ArrayFullLiteral(<>),
+    "[" <expr:Expr> ";" <size:IntLiteral> "]" => Expression::ArrayDefaultLiteral(Box::new(expr), size as usize),
 };
 
 UnOp: UnOpCode = {
