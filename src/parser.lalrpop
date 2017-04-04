@@ -122,30 +122,39 @@ AssignExpr: Spanned<Expression> = {
     LogOrExpr
 };
 
-LogOrExpr: Spanned<Expression> = {
-    <l:@L> <lhs:LogAndExpr> "||" <rhs:LogAndExpr> <r:@R> => {
+LogOrExpr = Tier<LogicalOrOp, LogAndExpr>;
+LogAndExpr = Tier<LogicalAndOp, EqExpr>;
+
+EqExpr: Spanned<Expression> = {
+    <l:@L> <lhs:CompExpr> <op:EqOp> <rhs:CompExpr> <r:@R> => {
         Spanned::new(
-            Expression::BinOp(BinOpCode::LogicalOr, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
-    LogAndExpr
+    CompExpr
 };
 
-LogAndExpr: Spanned<Expression> = {
-    <l:@L> <lhs:EqExpr> "&&" <rhs:EqExpr> <r:@R> => {
+CompExpr: Spanned<Expression> = {
+    <l:@L> <lhs:SumExpr> <op:CompOp> <rhs:SumExpr> <r:@R> => {
         Spanned::new(
-            Expression::BinOp(BinOpCode::LogicalAnd, Box::new(lhs), Box::new(rhs)),
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
-    EqExpr
+    SumExpr
 };
 
-EqExpr = Tier<EqOp, CompExpr>;
-CompExpr = Tier<CompOp, SumExpr>;
 SumExpr = Tier<SumOp, FactorExpr>;
 FactorExpr = Tier<FactorOp, UnOpExpr>;
+
+LogicalOrOp: BinOpCode = {
+    "||" => BinOpCode::LogicalOr
+};
+
+LogicalAndOp: BinOpCode = {
+    "&&" => BinOpCode::LogicalAnd
+};
 
 EqOp: BinOpCode = {
     "==" => BinOpCode::Equal,
