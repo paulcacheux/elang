@@ -1,3 +1,5 @@
+extern fn println_int(int);
+
 fn fib(i: int) -> int {
     if i <= 1 {
         return i;
@@ -9,5 +11,10 @@ fn fib(i: int) -> int {
 }
 
 fn main() -> int {
-    return fib(10);
+    let i = 0;
+    while i < 15 {
+        println_int(fib(i));
+        i = i + 1;
+    }
+    return 0;
 }
