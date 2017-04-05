@@ -44,8 +44,8 @@ pub fn binop_tyck(op: ast::BinOpCode,
         (Equal, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolEqual, Type::Bool)),
         (NotEqual, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolNotEqual, Type::Bool)),
 
-        (LogicalAnd, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolLogicalAnd, Type::Bool)),
-        (LogicalOr, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolLogicalOr, Type::Bool)),
+        // (LogicalAnd, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolLogicalAnd, Type::Bool)),
+        // (LogicalOr, &Type::Bool, &Type::Bool) => Some((ir::BinOpCode::BoolLogicalOr, Type::Bool)),
 
         (Add, &Type::Ptr(_), &Type::Int) => Some((ir::BinOpCode::PtrAdd, lhs_ty.clone())),
         _ => None,
@@ -59,7 +59,7 @@ pub fn unop_tyck(op: ast::UnOpCode, ty: &ir::Type) -> Option<(ir::UnOpCode, ir::
         (Minus, &Type::Int) => Some((ir::UnOpCode::IntMinus, Type::Int)),
         (Minus, &Type::Double) => Some((ir::UnOpCode::DoubleMinus, Type::Double)),
         (LogicalNot, &Type::Bool) => Some((ir::UnOpCode::BoolLogicalNot, Type::Bool)),
-        (AddressOf, ty) => Some((ir::UnOpCode::AddressOf, Type::Ptr(Box::new(ty.clone())))),
+        (AddressOf, &Type::LValue(ref ty)) => Some((ir::UnOpCode::AddressOf, Type::Ptr(ty.clone()))),
         (Deref, &Type::Ptr(ref sub)) => Some((ir::UnOpCode::PtrDeref, Type::LValue(sub.clone()))),
         _ => None,
     }

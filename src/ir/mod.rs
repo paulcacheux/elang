@@ -65,7 +65,7 @@ pub enum Expression {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct BasicBlockId(pub usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct LocalVarId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,8 +104,8 @@ pub enum BinOpCode {
     BoolEqual,
     BoolNotEqual,
 
-    BoolLogicalAnd,
-    BoolLogicalOr,
+    //BoolLogicalAnd,
+    //BoolLogicalOr,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

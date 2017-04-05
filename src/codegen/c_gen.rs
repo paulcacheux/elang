@@ -115,8 +115,8 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
                 IntGreaterEqual | DoubleGreaterEqual => ">=",
                 IntEqual | DoubleEqual | BoolEqual => "==",
                 IntNotEqual | DoubleNotEqual | BoolNotEqual => "!=",
-                BoolLogicalAnd => "&&",
-                BoolLogicalOr => "||",
+                // BoolLogicalAnd => "&&",
+                // BoolLogicalOr => "||",
             };
 
             write!(f, "temp_{} {} temp_{}", lhs.id, op, rhs.id)

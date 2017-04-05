@@ -8,13 +8,6 @@ fn fib(i: int) -> int {
     }
 }
 
-extern fn print_int(int);
-
-fn main() {
-    let i = 0;
-    let max = 50;
-    while i < max {
-        print_int(fib(i));
-        i = i + 1;
-    }
+fn main() -> int {
+    return fib(10);
 }

@@ -42,6 +42,12 @@ fn main() {
                  .short("o")
                  .value_name("FILE")
                  .takes_value(true))
+        .arg(Arg::with_name("output_type")
+                 .help("Output type")
+                 .long("type")
+                 .short("t")
+                 .takes_value(true)
+                 .possible_values(&["c", "llvm"]))
         .get_matches();
 
     let input_path = matches.value_of("INPUT").unwrap();
@@ -79,5 +85,14 @@ fn main() {
         Box::new(std::io::stdout())
     };
 
-    codegen::c_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
+
+    match matches.value_of("output_type").unwrap_or("llvm") {
+        "c" => {
+            codegen::c_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
+        },
+        "llvm" => {
+            codegen::llvm_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
+        },
+        _ => unreachable!()
+    }
 }
