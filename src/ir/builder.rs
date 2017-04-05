@@ -710,6 +710,7 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "int" => Ok(ir::Type::Int),
                 "double" => Ok(ir::Type::Double),
                 "bool" => Ok(ir::Type::Bool),
+                "char" => Ok(ir::Type::Char),
                 other => {
                     Err(SyntaxError {
                             msg: format!("Unrecognized type '{}'.", other),

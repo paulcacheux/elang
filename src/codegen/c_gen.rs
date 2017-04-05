@@ -148,8 +148,8 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
                 ir::Literal::Int(val) => write!(f, "{}", val),
                 ir::Literal::Double(val) => write!(f, "{}", val),
                 ir::Literal::Bool(val) => write!(f, "{}", if val { 1 } else { 0 }),
+                ir::Literal::Char(val) => write!(f, "{}", val),
                 ir::Literal::Unit => Ok(()),
-                ir::Literal::Char(_) => unimplemented!()
             }
         }
     }

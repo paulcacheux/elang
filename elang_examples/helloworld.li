@@ -1,0 +1,18 @@
+extern fn print_char(char);
+
+fn main() -> int {
+    print_char('H');
+    print_char('e');
+    print_char('l');
+    print_char('l');
+    print_char('o');
+    print_char(' ');
+    print_char('W');
+    print_char('o');
+    print_char('r');
+    print_char('l');
+    print_char('d');
+    print_char('!');
+    print_char('\n');
+    return 0;
+}
