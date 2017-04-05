@@ -46,6 +46,7 @@ pub enum Token {
     IntLit(i64),
     DoubleLit(f64),
     BoolLit(bool),
+    CharLit(String),
     Identifier(String),
 }
 
@@ -186,6 +187,27 @@ impl<'input> Iterator for Lexer<'input> {
                               .map(|i| i.1));
                 let len = id.len();
                 Some(Ok((i, utils::identifier_or_keyword(id), i + len)))
+            }
+            Some((i, '\'')) => {
+                let mut val = String::new();
+                let mut slash = false;
+
+                val.extend(self.chars.peeking_take_while(|c| {
+                    if slash {
+                        slash = false;
+                        true
+                    } else if c.1 == '\\' {
+                        slash = true;
+                        true
+                    } else if c.1 == '\'' {
+                        false
+                    } else {
+                        true
+                    }
+                }).map(|i| i.1));
+                self.chars.next();
+                let len = val.len() + 2;
+                Some(Ok((i, Token::CharLit(val), i + len)))
             }
             Some((i, c)) => {
                 Some(Err(LexicalError {

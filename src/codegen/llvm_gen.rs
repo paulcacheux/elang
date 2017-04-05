@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use itertools::Itertools;
 
-use ast;
 use ir;
 use std::io::prelude::*;
 use std::io;
@@ -270,18 +269,22 @@ impl<'a> FunctionGenerator<'a> {
             }
             ir::Expression::Literal(lit) => {
                 match lit {
-                    ast::Literal::Int(val) => {
+                    ir::Literal::Int(val) => {
                         write!(self.writer, "select i1 true, i32 {}, i32 0", val)
-                    }
-                    ast::Literal::Double(val) => {
+                    },
+                    ir::Literal::Double(val) => {
                         write!(self.writer, "select i1 true, f64 {}, f64 0.0", val)
-                    }
-                    ast::Literal::Bool(val) => {
+                    },
+                    ir::Literal::Bool(val) => {
                         write!(self.writer,
                                "select i1 true, i1 {}, i1 0",
                                if val { 1 } else { 0 })
-                    }
-                    ast::Literal::Unit => Ok(()),
+                    },
+                    ir::Literal::Char(val) => {
+                        write!(self.writer, "select i1 true, i8 {}, i8 0", val)
+                    },
+                    ir::Literal::Unit => Ok(()),
+
                 }
             }
         }
@@ -317,6 +320,7 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Bool => format!("i1"), // cause c you know
         ir::Type::Int => format!("i32"),
         ir::Type::Double => format!("f64"),
+        ir::Type::Char => format!("i8"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Array(sub, size) => format!("[{} x {}]", type_to_string(*sub), size),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),

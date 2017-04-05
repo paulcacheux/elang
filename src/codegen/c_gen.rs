@@ -1,4 +1,3 @@
-use ast;
 use ir;
 use std::io::prelude::*;
 use std::io;
@@ -146,10 +145,11 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
         }
         ir::Expression::Literal(lit) => {
             match lit {
-                ast::Literal::Int(val) => write!(f, "{}", val),
-                ast::Literal::Double(val) => write!(f, "{}", val),
-                ast::Literal::Bool(val) => write!(f, "{}", if val { 1 } else { 0 }),
-                ast::Literal::Unit => Ok(()),
+                ir::Literal::Int(val) => write!(f, "{}", val),
+                ir::Literal::Double(val) => write!(f, "{}", val),
+                ir::Literal::Bool(val) => write!(f, "{}", if val { 1 } else { 0 }),
+                ir::Literal::Char(val) => write!(f, "{}", val),
+                ir::Literal::Unit => Ok(()),
             }
         }
     }
@@ -181,6 +181,7 @@ fn type_to_string_with_name(ty: ir::Type, name: String) -> String {
         ir::Type::Bool => format!("int {}", name), // cause c you know
         ir::Type::Int => format!("int {}", name),
         ir::Type::Double => format!("double {}", name),
+        ir::Type::Char => format!("char {}", name),
         ir::Type::LValue(sub) => format!("{} *{}", type_to_string(*sub), name),
         ir::Type::Array(sub, size) => format!("{} {}[{}]", type_to_string(*sub), name, size),
         ir::Type::Ptr(sub) => format!("{} *{}", type_to_string(*sub), name),
@@ -202,6 +203,7 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Bool => format!("int"), // cause c you know
         ir::Type::Int => format!("int"),
         ir::Type::Double => format!("double"),
+        ir::Type::Char => format!("char"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Array(sub, size) => format!("{}[{}]", type_to_string(*sub), size),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),

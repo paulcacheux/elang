@@ -1,0 +1,6 @@
+fn main() -> int {
+    let a = '\'';
+    let b = '\n';
+    let c = 'h';
+    return 0;
+}

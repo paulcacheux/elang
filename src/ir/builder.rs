@@ -150,7 +150,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                 function_builder.add_statement(
                     ir::Statement::Assign(
                         value.clone(),
-                        ir::Expression::Literal(ast::Literal::Unit)
+                        ir::Expression::Literal(ir::Literal::Unit)
                     )
                 );
                 function_builder.terminate_current(TempTerminator::Ret(value));
@@ -350,7 +350,7 @@ fn build_statement(fb: &mut FunctionBuilder,
                 (value, error_span)
             } else {
                 let value = fb.new_temp_value(ir::Type::Unit);
-                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ast::Literal::Unit)));
+                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Unit)));
                 (value, stmt.span)
             };
 
@@ -455,7 +455,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 fb.terminate_current(TempTerminator::Fallthrough);
                 let false_index = fb.current_bb_index;
                 let false_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ast::Literal::Bool(false))));
+                fb.add_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ir::Literal::Bool(false))));
                 let final_value2 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
                 fb.add_statement(ir::Statement::LValueSet(final_value2, false_value));
@@ -496,7 +496,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 let true_index = fb.current_bb_index;
                 let true_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ast::Literal::Bool(true))));
+                fb.add_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ir::Literal::Bool(true))));
                 let final_value2 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
                 fb.add_statement(ir::Statement::LValueSet(final_value2, true_value));
@@ -626,13 +626,14 @@ fn build_expression(fb: &mut FunctionBuilder,
             }
         }
         ast::Expression::Literal(lit) => {
+            let lit = build_literal(lit, expr.span)?;
             let ty = match lit {
-                ast::Literal::Int(_) => ir::Type::Int,
-                ast::Literal::Double(_) => ir::Type::Double,
-                ast::Literal::Bool(_) => ir::Type::Bool,
-                ast::Literal::Unit => ir::Type::Unit,
+                ir::Literal::Int(_) => ir::Type::Int,
+                ir::Literal::Double(_) => ir::Type::Double,
+                ir::Literal::Bool(_) => ir::Type::Bool,
+                ir::Literal::Char(_) => ir::Type::Char,
+                ir::Literal::Unit => ir::Type::Unit,
             };
-
             let value = fb.new_temp_value(ty);
             fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
             Ok(value)
@@ -642,6 +643,49 @@ fn build_expression(fb: &mut FunctionBuilder,
         }
         ast::Expression::ArrayDefaultLiteral(_, _) => {
             unimplemented!()
+        }
+    }
+}
+
+fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxError> {
+    match lit {
+        ast::Literal::Unit => Ok(ir::Literal::Unit),
+        ast::Literal::Int(val) => Ok(ir::Literal::Int(val)),
+        ast::Literal::Double(val) => Ok(ir::Literal::Double(val)),
+        ast::Literal::Bool(val) => Ok(ir::Literal::Bool(val)),
+        ast::Literal::Char(val) => {
+            let mut output = String::with_capacity(val.len());
+            let mut slash = false;
+            for c in val.chars() {
+                if slash {
+                    output.push(match c {
+                        '\'' | '\"' => c,
+                        'a' => '\x07',
+                        'b' => '\x08',
+                        'f' => '\x0c',
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        'v' => '\x0b',
+                        '0' => '\0',
+                        _ => return Err(SyntaxError { msg: format!("Invalid escape char '{}'.", c), span: span })
+                    });
+                    slash = false;
+                } else {
+                    if c == '\\' {
+                        slash = true;
+                    } else {
+                        output.push(c);
+                    }
+                }
+            }
+            if output.len() > 1 {
+                Err(SyntaxError { msg: format!("Multiple char in char literal."), span: span })
+            } else if output.len() == 0 {
+                Err(SyntaxError { msg: format!("Empty char literal."), span: span })
+            } else {
+                Ok(ir::Literal::Char(output.chars().next().unwrap() as u8))
+            }
         }
     }
 }
@@ -666,6 +710,7 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "int" => Ok(ir::Type::Int),
                 "double" => Ok(ir::Type::Double),
                 "bool" => Ok(ir::Type::Bool),
+                "char" => Ok(ir::Type::Char),
                 other => {
                     Err(SyntaxError {
                             msg: format!("Unrecognized type '{}'.", other),

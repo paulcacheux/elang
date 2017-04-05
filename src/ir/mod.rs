@@ -1,4 +1,3 @@
-use ast;
 use std::fmt;
 use itertools::Itertools;
 
@@ -59,7 +58,16 @@ pub enum Expression {
     UnOp(UnOpCode, Value),
     ReadArray(Value, Value),
     FuncCall(Value, Vec<Value>),
-    Literal(ast::Literal),
+    Literal(Literal),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    Int(i64),
+    Double(f64),
+    Bool(bool),
+    Char(u8),
+    Unit,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -103,9 +111,6 @@ pub enum BinOpCode {
     DoubleNotEqual,
     BoolEqual,
     BoolNotEqual,
-
-    //BoolLogicalAnd,
-    //BoolLogicalOr,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,6 +128,7 @@ pub enum Type {
     Bool,
     Int,
     Double,
+    Char,
     LValue(Box<Type>),
     Array(Box<Type>, usize),
     Ptr(Box<Type>),
@@ -142,6 +148,7 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "bool"),
             Type::Int => write!(f, "int"),
             Type::Double => write!(f, "double"),
+            Type::Char => write!(f, "char"),
             Type::LValue(ref sub) => write!(f, "&{}", *sub),
             Type::Array(ref sub, size) => write!(f, "[{}; {}]", *sub, size),
             Type::Ptr(ref sub) => write!(f, "*{}", *sub),

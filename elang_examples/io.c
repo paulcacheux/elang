@@ -16,3 +16,7 @@ void println_int(int value) {
 void println_double(double value) {
     printf("%f\n", value);
 }
+
+void print_char(char c) {
+    putchar(c);
+}
