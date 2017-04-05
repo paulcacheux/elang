@@ -108,10 +108,11 @@ fn print_expr(expr: &Expression) {
         }
         Expression::Literal(ref lit) => {
             match *lit {
-                ast::Literal::Int(val) => print!("IntLit '{}'", val),
-                ast::Literal::Double(val) => print!("DoubleLit '{}'", val),
-                ast::Literal::Bool(val) => print!("BoolLit '{:?}'", val),
-                ast::Literal::Unit => print!("UnitLit"),
+                Literal::Int(val) => print!("IntLit '{}'", val),
+                Literal::Double(val) => print!("DoubleLit '{}'", val),
+                Literal::Bool(val) => print!("BoolLit '{:?}'", val),
+                Literal::Char(val) => print!("CharLit '{}' '{}'", val, val as char),
+                Literal::Unit => print!("UnitLit"),
             }
         }
     }

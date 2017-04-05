@@ -69,6 +69,7 @@ pub enum Literal {
     Int(i64),
     Double(f64),
     Bool(bool),
+    Char(String),
     Unit,
 }
 

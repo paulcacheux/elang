@@ -227,6 +227,7 @@ impl ASTPrinter {
                     Literal::Int(val) => println!("IntLit '{}'", val),
                     Literal::Double(val) => println!("DoubleLit '{}'", val),
                     Literal::Bool(val) => println!("BoolLit '{:?}'", val),
+                    Literal::Char(ref val) => println!("CharLit '{}'", val),
                     Literal::Unit => println!("UnitLit"),
                 }
             }

@@ -217,6 +217,7 @@ Term: Expression = {
     DoubleLiteral => Expression::Literal(Literal::Double(<>)),
     IntLiteral => Expression::Literal(Literal::Int(<>)),
     BoolLiteral => Expression::Literal(Literal::Bool(<>)),
+    CharLiteral => Expression::Literal(Literal::Char(<>)),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
     ArrayLiteral,
@@ -297,6 +298,7 @@ extern {
         IntLiteral => lexer::Token::IntLit(<i64>),
         DoubleLiteral => lexer::Token::DoubleLit(<f64>),
         BoolLiteral => lexer::Token::BoolLit(<bool>),
+        CharLiteral => lexer::Token::CharLit(<String>),
         Identifier => lexer::Token::Identifier(<String>),
     }
 }
