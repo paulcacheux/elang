@@ -146,7 +146,7 @@ CompExpr: Spanned<Expression> = {
 };
 
 SumExpr = Tier<SumOp, FactorExpr>;
-FactorExpr = Tier<FactorOp, UnOpExpr>;
+FactorExpr = Tier<FactorOp, CastExpr>;
 
 LogicalOrOp: BinOpCode = {
     "||" => BinOpCode::LogicalOr
@@ -189,16 +189,20 @@ Tier<Op, NextTier>: Spanned<Expression> = {
     NextTier
 };
 
-UnOpExpr: Spanned<Expression> = {
-    <l:@L> <op:UnOp> <expr:SubscriptOrCallExpr> <r:@R> => {
+CastExpr: Spanned<Expression> = {
+    <l:@L> <expr:UnOpExpr> "as" <ty:Spanned<Type>> <r:@R> => {
         Spanned::new(
-            Expression::UnOp(op, Box::new(expr)),
+            Expression::Cast(Box::new(expr), ty),
             Span(l, r)
         )
     },
-    <l:@L> <expr:SubscriptOrCallExpr> "as" <ty:Spanned<Type>> <r:@R> => {
+    UnOpExpr
+};
+
+UnOpExpr: Spanned<Expression> = {
+    <l:@L> <op:UnOp> <expr:UnOpExpr> <r:@R> => {
         Spanned::new(
-            Expression::Cast(Box::new(expr), ty),
+            Expression::UnOp(op, Box::new(expr)),
             Span(l, r)
         )
     },

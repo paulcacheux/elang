@@ -1,0 +1,7 @@
+extern fn println_int(int);
+
+fn main() -> int {
+    println_int(--12);
+    println_int(!!true as int);
+    return 0;
+}
