@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use ir;
 use ast;
 use ast::{Span, Spanned};
 use ir::tyck;
-
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {
@@ -145,22 +143,20 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             build_compound_statement(&mut function_builder, stmt)?;
 
             if *function_builder.ty.return_ty == ir::Type::Unit {
-                function_builder.cursor_to_end();
                 let value = function_builder.new_temp_value(ir::Type::Unit);
-                function_builder.add_statement(
+                function_builder.push_statement(
                     ir::Statement::Assign(
                         value.clone(),
                         ir::Expression::Literal(ir::Literal::Unit)
                     )
                 );
-                function_builder.terminate_current(TempTerminator::Ret(value));
+                let useless_label = function_builder.new_label();
+                function_builder.push_terminator_label(Some(ir::Terminator::Ret(value)), useless_label);
             }
-
-            function_builder.check_paths(decl.span)?;
 
             function_builder.symbol_table.end_local_scope();
 
-            Ok(function_builder.to_function())
+            function_builder.to_function(decl.span)
         }
     }
 }
@@ -201,8 +197,8 @@ fn build_statement(fb: &mut FunctionBuilder,
 
                 let (_, lval_expr) = fb.symbol_table.get_var(&name).unwrap(); //TODO optimize
                 let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ty)));
-                fb.add_statement(ir::Statement::Assign(lvalue.clone(), lval_expr));
-                fb.add_statement(ir::Statement::LValueSet(lvalue, expr_value));
+                fb.push_statement(ir::Statement::Assign(lvalue.clone(), lval_expr));
+                fb.push_statement(ir::Statement::LValueSet(lvalue, expr_value));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -212,37 +208,25 @@ fn build_statement(fb: &mut FunctionBuilder,
             }
         }
         ast::Statement::Loop { stmt } => {
-            let continue_id = fb.bb_counter;
-            fb.terminate_current(TempTerminator::Fallthrough);
-            let stmt_index = fb.current_bb_index;
-            fb.terminate_current(TempTerminator::Fallthrough);
-            let break_id = fb.bb_counter;
-            fb.terminate_current(TempTerminator::Jmp(ir::BasicBlockId(continue_id)));
+            let continue_label = fb.new_label();
+            fb.push_terminator_label(None, continue_label);
+            let break_label = fb.new_label();
 
-            fb.current_bb_index = stmt_index;
-            let old_loop_infos = fb.current_loop_info.clone();
-            fb.current_loop_info = Some((ir::BasicBlockId(continue_id),
-                                         ir::BasicBlockId(break_id)));
+            let old_loop_info = fb.current_loop_info;
+            fb.current_loop_info = Some((continue_label, break_label));
             build_compound_statement(fb, stmt)?;
-            fb.current_loop_info = old_loop_infos;
+            fb.current_loop_info = old_loop_info;
 
-            fb.cursor_to_end();
+            fb.push_terminator_label(Some(ir::Terminator::Br(continue_label)), break_label);
             Ok(())
         }
         ast::Statement::While { cond, stmt } => {
             let error_span = cond.span;
-            let continue_id = fb.bb_counter;
-            fb.terminate_current(TempTerminator::Fallthrough);
-            let cond_index = fb.current_bb_index;
-            fb.terminate_current(TempTerminator::Fallthrough);
-            let stmt_index = fb.current_bb_index;
-            fb.terminate_current(TempTerminator::Fallthrough);
-            let break_id = fb.bb_counter;
-            fb.terminate_current(TempTerminator::Jmp(ir::BasicBlockId(continue_id)));
-
+            let continue_label = fb.new_label();
+            fb.push_terminator_label(None, continue_label);
             fb.symbol_table.start_local_scope();
-            fb.current_bb_index = cond_index;
             let cond_value = build_expression(fb, cond)?;
+            let cond_value = build_lvalue_to_rvalue(fb, cond_value);
 
             if cond_value.ty != ir::Type::Bool {
                 return Err(SyntaxError {
@@ -251,17 +235,17 @@ fn build_statement(fb: &mut FunctionBuilder,
                            });
             }
 
-            fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(break_id)));
+            let stmt_label = fb.new_label();
+            let break_label = fb.new_label();
+            fb.push_terminator_label(Some(ir::Terminator::BrCond(cond_value, stmt_label, break_label)), stmt_label);
 
-            fb.current_bb_index = stmt_index;
-            let old_loop_infos = fb.current_loop_info.clone();
-            fb.current_loop_info = Some((ir::BasicBlockId(continue_id),
-                                         ir::BasicBlockId(break_id)));
+            let old_loop_info = fb.current_loop_info;
+            fb.current_loop_info = Some((continue_label, break_label));
             build_compound_statement(fb, stmt)?;
-            fb.current_loop_info = old_loop_infos;
+            fb.current_loop_info = old_loop_info;
 
+            fb.push_terminator_label(Some(ir::Terminator::Br(continue_label)), break_label);
             fb.symbol_table.end_local_scope();
-            fb.cursor_to_end();
             Ok(())
         }
         ast::Statement::If {
@@ -270,59 +254,39 @@ fn build_statement(fb: &mut FunctionBuilder,
             else_branch,
         } => {
             let branches = vec![if_branch].into_iter().chain(elseif_branches);
-            let mut finalizer_indexes = Vec::new();
+            let global_end_label = fb.new_label();
 
             fb.symbol_table.start_local_scope();
             for branch in branches {
                 let error_span = branch.0.span;
-                fb.terminate_current(TempTerminator::Fallthrough);
                 let cond_value = build_expression(fb, branch.0)?;
+                let cond_value = build_lvalue_to_rvalue(fb, cond_value);
 
                 if cond_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                                   msg: format!("Condititoon type must be bool."),
+                                   msg: format!("Condition type must be bool."),
                                    span: error_span,
                                });
                 }
 
-                let cond_index = fb.current_bb_index;
-                fb.terminate_current(TempTerminator::Fallthrough);
+                let if_label = fb.new_label();
+                let else_label = fb.new_label();
 
+                fb.push_terminator_label(Some(ir::Terminator::BrCond(cond_value, if_label, else_label)), if_label);
                 build_compound_statement(fb, branch.1)?;
-                let else_index = fb.current_bb_index;
-                finalizer_indexes.push(else_index);
-                fb.terminate_current(TempTerminator::Fallthrough);
-                let else_id = fb.bb_counter;
-
-                fb.current_bb_index = cond_index;
-                fb.change_terminator(TempTerminator::Jz(cond_value, ir::BasicBlockId(else_id)));
-
-                fb.current_bb_index = else_index;
+                fb.push_terminator_label(Some(ir::Terminator::Br(global_end_label)), else_label);
             }
-            fb.terminate_current(TempTerminator::Fallthrough);
-
-            if let Some(stmt) = else_branch {
-                build_compound_statement(fb, stmt)?;
-            }
-            fb.terminate_current(TempTerminator::Fallthrough);
-            finalizer_indexes.push(fb.current_bb_index);
-
-            let end_index = fb.bb_counter;
-            fb.terminate_current(TempTerminator::Fallthrough);
-
-            for index in finalizer_indexes {
-                fb.current_bb_index = index;
-                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(end_index)));
+            if let Some(branch) = else_branch {
+                build_compound_statement(fb, branch)?;
             }
 
+            fb.push_terminator_label(None, global_end_label);
             fb.symbol_table.end_local_scope();
-
-            fb.cursor_to_end();
             Ok(())
         }
         ast::Statement::Break => {
             if let Some((_, id)) = fb.current_loop_info.clone() {
-                fb.terminate_current(TempTerminator::Jmp(id));
+                fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -333,7 +297,7 @@ fn build_statement(fb: &mut FunctionBuilder,
         }
         ast::Statement::Continue => {
             if let Some((id, _)) = fb.current_loop_info.clone() {
-                fb.terminate_current(TempTerminator::Jmp(id));
+                fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -350,12 +314,12 @@ fn build_statement(fb: &mut FunctionBuilder,
                 (value, error_span)
             } else {
                 let value = fb.new_temp_value(ir::Type::Unit);
-                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Unit)));
+                fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Unit)));
                 (value, stmt.span)
             };
 
             if value.ty == *fb.ty.return_ty {
-                fb.terminate_current(TempTerminator::Ret(value));
+                fb.push_terminator(Some(ir::Terminator::Ret(value)));
                 Ok(())
             } else {
                 Err(SyntaxError {
@@ -369,6 +333,7 @@ fn build_statement(fb: &mut FunctionBuilder,
             Ok(())
         }
     }
+
 }
 
 fn build_expression(fb: &mut FunctionBuilder,
@@ -382,7 +347,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             if let ir::Type::LValue(sub) = lhs_value.ty.clone() {
                 if *sub == rhs_value.ty.clone() {
-                    fb.add_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
+                    fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
                     Ok(rhs_value)
                 } else {
                     Err(SyntaxError {
@@ -406,7 +371,7 @@ fn build_expression(fb: &mut FunctionBuilder,
             if let ir::Type::Array(sub, _) = array_value.ty.clone() {
                 if ir::Type::Int == index_value.ty {
                     let value = fb.new_temp_value(ir::Type::LValue(sub));
-                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                    fb.push_statement(ir::Statement::Assign(value.clone(),
                                                            ir::Expression::ReadArray(array_value,
                                                                                      index_value)));
                     Ok(value)
@@ -425,119 +390,69 @@ fn build_expression(fb: &mut FunctionBuilder,
         }
         ast::Expression::BinOp(code, lhs, rhs) => {
             if code == ast::BinOpCode::LogicalAnd {
-                let logical_local_id = fb.register_local_logical();
+                let logical_result = fb.register_local_logical();
                 let lhs_value = build_expression(fb, *lhs)?;
                 let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
-                if lhs_value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Operation mismatching for those types."),
-                        span: expr.span,
-                    })
-                }
-                let check_index = fb.current_bb_index;
-                fb.terminate_current(TempTerminator::Fallthrough);
+
+                let true_label = fb.new_label();
+                let false_label = fb.new_label();
+                let final_label = fb.new_label();
+
+                fb.push_terminator_label(Some(ir::Terminator::BrCond(lhs_value, true_label, false_label)), true_label);
+
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
-                let true_index = fb.current_bb_index;
+                let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
+                fb.push_statement(ir::Statement::Assign(final_value_rhs.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
-                if rhs_value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Operation mismatching for those types."),
-                        span: expr.span,
-                    })
-                }
+                fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), false_label);
 
-                let final_value1 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(final_value1.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
-                fb.add_statement(ir::Statement::LValueSet(final_value1, rhs_value));
-
-                let false_id = fb.bb_counter;
-                fb.terminate_current(TempTerminator::Fallthrough);
-                let false_index = fb.current_bb_index;
                 let false_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ir::Literal::Bool(false))));
-                let final_value2 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
-                fb.add_statement(ir::Statement::LValueSet(final_value2, false_value));
+                fb.push_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ir::Literal::Bool(false))));
+                let final_value_false = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
+                fb.push_statement(ir::Statement::Assign(final_value_false.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::LValueSet(final_value_false, false_value));
 
-                let final_id = fb.bb_counter;
-                fb.terminate_current(TempTerminator::Fallthrough);
-                let final_index = fb.current_bb_index;
+                fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), final_label);
 
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.push_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
-
-                fb.current_bb_index = check_index;
-                fb.change_terminator(TempTerminator::Jz(lhs_value, ir::BasicBlockId(false_id)));
-
-                fb.current_bb_index = true_index;
-                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
-
-                fb.current_bb_index = false_index;
-                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
-
-                fb.current_bb_index = final_index;
+                fb.push_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
 
                 Ok(return_value)
             } else if code == ast::BinOpCode::LogicalOr {
-                let logical_local_id = fb.register_local_logical();
+                let logical_result = fb.register_local_logical();
                 let lhs_value = build_expression(fb, *lhs)?;
                 let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
-                if lhs_value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Operation mismatching for those types."),
-                        span: expr.span,
-                    })
-                }
-                let check_index = fb.current_bb_index;
-                fb.terminate_current(TempTerminator::Fallthrough);
 
-                let true_index = fb.current_bb_index;
+                let true_label = fb.new_label();
+                let false_label = fb.new_label();
+                let final_label = fb.new_label();
+
+                fb.push_terminator_label(Some(ir::Terminator::BrCond(lhs_value, true_label, false_label)), true_label);
+
                 let true_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ir::Literal::Bool(true))));
-                let final_value2 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(final_value2.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
-                fb.add_statement(ir::Statement::LValueSet(final_value2, true_value));
+                fb.push_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ir::Literal::Bool(true))));
+                let final_value_true = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
+                fb.push_statement(ir::Statement::Assign(final_value_true.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::LValueSet(final_value_true, true_value));
 
-                let false_id = fb.bb_counter;
-                fb.terminate_current(TempTerminator::Fallthrough);
+                fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), false_label);
+
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
-                let false_index = fb.current_bb_index;
+                let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
+                fb.push_statement(ir::Statement::Assign(final_value_rhs.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
-                if rhs_value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                        msg: format!("Operation mismatching for those types."),
-                        span: expr.span,
-                    })
-                }
-
-                let final_value1 = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(final_value1.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
-                fb.add_statement(ir::Statement::LValueSet(final_value1, rhs_value));
-
-
-                let final_id = fb.bb_counter;
-                fb.terminate_current(TempTerminator::Fallthrough);
-                let final_index = fb.current_bb_index;
+                fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), final_label);
 
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.add_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_local_id.clone())));
+                fb.push_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
-                fb.add_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
-
-                fb.current_bb_index = check_index;
-                fb.change_terminator(TempTerminator::Jz(lhs_value, ir::BasicBlockId(false_id)));
-
-                fb.current_bb_index = true_index;
-                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
-
-                fb.current_bb_index = false_index;
-                fb.change_terminator(TempTerminator::Jmp(ir::BasicBlockId(final_id)));
-
-                fb.current_bb_index = final_index;
+                fb.push_statement(ir::Statement::Assign(return_value.clone(), ir::Expression::LValueLoad(return_lvalue)));
 
                 Ok(return_value)
             } else {
@@ -549,7 +464,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
                     let value = fb.new_temp_value(ty);
 
-                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                    fb.push_statement(ir::Statement::Assign(value.clone(),
                                                            ir::Expression::BinOp(op,
                                                                                  lhs_value,
                                                                                  rhs_value)));
@@ -568,7 +483,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             if let Some((op, ty)) = tyck::unop_tyck(code, &sub_value.ty) {
                 let value = fb.new_temp_value(ty);
-                fb.add_statement(ir::Statement::Assign(value.clone(),
+                fb.push_statement(ir::Statement::Assign(value.clone(),
                                                        ir::Expression::UnOp(op, sub_value)));
                 Ok(value)
             } else {
@@ -595,7 +510,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 if param_ty == func_ty.params_ty {
                     let value = fb.new_temp_value(*func_ty.return_ty);
-                    fb.add_statement(ir::Statement::Assign(value.clone(),
+                    fb.push_statement(ir::Statement::Assign(value.clone(),
                                                            ir::Expression::FuncCall(func_value,
                                                                                     param_values)));
                     Ok(value)
@@ -619,7 +534,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             if let Some(code) = tyck::cast_tyck(&expr_value.ty, &target_ty) {
                 let value = fb.new_temp_value(target_ty);
-                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::CastOp(code, expr_value)));
+                fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::CastOp(code, expr_value)));
 
                 Ok(value)
             } else {
@@ -628,12 +543,12 @@ fn build_expression(fb: &mut FunctionBuilder,
                     span: expr.span,
                 })
             }
-        },
+        }
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
             if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {
                 let value = fb.new_temp_value(ty);
-                fb.add_statement(ir::Statement::Assign(value.clone(), expr));
+                fb.push_statement(ir::Statement::Assign(value.clone(), expr));
                 Ok(value)
             } else {
                 Err(SyntaxError {
@@ -652,7 +567,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 ir::Literal::Unit => ir::Type::Unit,
             };
             let value = fb.new_temp_value(ty);
-            fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
+            fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
             Ok(value)
         }
         ast::Expression::ArrayFullLiteral(_) => {
@@ -709,9 +624,9 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
 
 fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Value {
     if let ir::Type::LValue(sub) = value.ty.clone() {
-        let rvalue = fb.new_temp_value(*sub);
-        fb.add_statement(ir::Statement::Assign(rvalue.clone(), ir::Expression::LValueLoad(value)));
-        rvalue
+        let new_value = fb.new_temp_value(*sub);
+        fb.push_statement(ir::Statement::Assign(new_value.clone(), ir::Expression::LValueLoad(value)));
+        new_value
     } else {
         value
     }
@@ -740,18 +655,9 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
 }
 
 #[derive(Debug, Clone)]
-pub struct TempBasicBlock {
-    id: ir::BasicBlockId,
-    stmts: Vec<ir::Statement>,
-    terminator: TempTerminator,
-}
-
-#[derive(Debug, Clone)]
-pub enum TempTerminator {
-    Jmp(ir::BasicBlockId),
-    Jz(ir::Value, ir::BasicBlockId),
-    Ret(ir::Value),
-    Fallthrough,
+enum Item {
+    Statement(ir::Statement),
+    TerminatorAndLabel(Option<ir::Terminator>, ir::BasicBlockId), // None if fallthrough
 }
 
 #[derive(Debug)]
@@ -760,10 +666,9 @@ struct FunctionBuilder<'a> {
     ty: ir::FunctionType,
     symbol_table: &'a mut SymbolTable,
     locals: Vec<ir::LocalVar>,
+    items: Vec<Item>,
     local_counter: usize,
-    basic_blocks: Vec<TempBasicBlock>,
-    current_bb_index: usize,
-    bb_counter: usize,
+    label_counter: usize,
     current_temp_id: usize,
     current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)>, // (continue, break)
 }
@@ -775,102 +680,143 @@ impl<'a> FunctionBuilder<'a> {
             ty: ty,
             symbol_table: st,
             locals: Vec::new(),
+            items: Vec::new(),
             local_counter: 0,
-            basic_blocks: vec![TempBasicBlock {
-                                   id: ir::BasicBlockId(0),
-                                   stmts: Vec::new(),
-                                   terminator: TempTerminator::Fallthrough,
-                               }],
-            current_bb_index: 0,
-            bb_counter: 1,
+            label_counter: 1,
             current_temp_id: 0,
             current_loop_info: None,
         }
     }
 
-    fn check_paths(&mut self, span: Span) -> Result<(), SyntaxError> {
-        let mut succs: HashMap<ir::BasicBlockId, Vec<ir::BasicBlockId>> = HashMap::new();
-        for (i, bb) in self.basic_blocks.iter().enumerate() {
-            let succ_list = succs.entry(bb.id).or_insert(Vec::new());
-            match bb.terminator {
-                TempTerminator::Jmp(id) => {
-                    succ_list.push(id);
+    fn to_function(self, span: Span) -> Result<ir::Declaration, SyntaxError> {
+        #[derive(Clone)]
+        enum PanicTerminator {
+            Real(ir::Terminator),
+            Panic
+        }
+
+        struct TempBasicBlock {
+            id: ir::BasicBlockId,
+            stmts: Vec<ir::Statement>,
+            terminator: PanicTerminator,
+        }
+
+        let mut basic_blocks = Vec::new();
+        let mut current_id = ir::BasicBlockId(0);
+        let mut current_stmts = Vec::new();
+
+        for item in self.items {
+            match item {
+                Item::Statement(s) => current_stmts.push(s),
+                Item::TerminatorAndLabel(terminator, label) => {
+                    let terminator = if let Some(real_ter) = terminator.clone() {
+                        real_ter
+                    } else {
+                        ir::Terminator::Br(label)
+                    };
+                    basic_blocks.push(TempBasicBlock {
+                        id: current_id,
+                        stmts: current_stmts,
+                        terminator: PanicTerminator::Real(terminator),
+                    });
+                    current_id = label;
+                    current_stmts = Vec::new();
                 }
-                TempTerminator::Ret(_) => {}
-                TempTerminator::Jz(_, id) => {
-                    succ_list.push(id);
-                    if i + 1 < self.basic_blocks.len() {
-                        succ_list.push(self.basic_blocks[i + 1].id);
+            }
+        }
+
+        basic_blocks.push(TempBasicBlock {
+            id: current_id,
+            stmts: current_stmts,
+            terminator: PanicTerminator::Panic,
+        });
+
+        // remove check panic
+        let mut preds: HashMap<ir::BasicBlockId, HashSet<ir::BasicBlockId>> = HashMap::new();
+        for bb in basic_blocks.iter() {
+            if let PanicTerminator::Real(ref terminator) = bb.terminator {
+                match *terminator {
+                    ir::Terminator::Br(id) => {
+                        preds.entry(id).or_insert(HashSet::new()).insert(bb.id);
                     }
-                }
-                TempTerminator::Fallthrough => {
-                    if i + 1 < self.basic_blocks.len() {
-                        succ_list.push(self.basic_blocks[i + 1].id);
+                    ir::Terminator::Ret(_) => {
+                    }
+                    ir::Terminator::BrCond(_, id1, id2) => {
+                        preds.entry(id1).or_insert(HashSet::new()).insert(bb.id);
+                        preds.entry(id2).or_insert(HashSet::new()).insert(bb.id);
                     }
                 }
             }
         }
 
         let mut opened = Vec::new();
-        opened.push(ir::BasicBlockId(0));
-        let mut touched = HashSet::<ir::BasicBlockId>::new();
+        opened.push(basic_blocks[basic_blocks.len()-1].id);
+        let mut panic_preds = HashSet::<ir::BasicBlockId>::new();
 
         while opened.len() != 0 {
             let id = opened.pop().unwrap();
-            for succ in succs.get(&id).unwrap() {
-                if !touched.contains(succ) {
-                    opened.push(*succ);
+            for pred in preds.get(&id).unwrap_or(&HashSet::new()) {
+                if !panic_preds.contains(pred) {
+                    opened.push(*pred);
                 }
             }
-            touched.insert(id);
+            panic_preds.insert(id);
         }
 
-        self.basic_blocks.retain(|bb| touched.contains(&bb.id));
-
-        match self.basic_blocks.last().unwrap().terminator {
-            TempTerminator::Fallthrough |
-            TempTerminator::Jz(_, _) => {
-                return Err(SyntaxError {
-                               msg: format!("Not all paths return."),
-                               span: span,
-                           })
-            }
-            _ => return Ok(()),
+        if panic_preds.contains(&ir::BasicBlockId(0)) {
+            return Err(SyntaxError {
+                msg: format!("Not all paths return."),
+                span: span,
+            })
+        } else {
+            basic_blocks.pop();
         }
-    }
 
-    fn to_function(self) -> ir::Declaration {
-        let mut bbs = Vec::with_capacity(self.basic_blocks.len());
+        basic_blocks.retain(|bb| preds.get(&bb.id).map(|s| s.len()).unwrap_or(0) != 0 || bb.id.0 == 0);
 
-        for i in 0..self.basic_blocks.len() {
-            let term = match self.basic_blocks[i].terminator.clone() {
-                TempTerminator::Jmp(id) => ir::Terminator::Br(id),
-                TempTerminator::Ret(value) => ir::Terminator::Ret(value),
-                TempTerminator::Fallthrough => ir::Terminator::Br(self.basic_blocks[i + 1].id),
-                TempTerminator::Jz(value, id) => {
-                    ir::Terminator::BrCond(value, self.basic_blocks[i + 1].id, id)
+        let real_bbs = basic_blocks.into_iter().map(|bb| {
+            if let PanicTerminator::Real(term) = bb.terminator {
+                ir::BasicBlock {
+                    id: bb.id,
+                    stmts: bb.stmts,
+                    terminator: term
                 }
-            };
+            } else {
+                unreachable!()
+            }
+        }).collect();
 
-            bbs.push(ir::BasicBlock {
-                         id: self.basic_blocks[i].id,
-                         stmts: self.basic_blocks[i].stmts.clone(),
-                         terminator: term,
-                     })
-        }
-
-        ir::Declaration::Function {
+        Ok(ir::Declaration::Function {
             name: self.name,
             ty: self.ty,
             locals: self.locals,
-            bbs: bbs,
-        }
+            bbs: real_bbs,
+        })
     }
 
     fn new_temp_value(&mut self, ty: ir::Type) -> ir::Value {
         let id = self.current_temp_id;
         self.current_temp_id += 1;
         ir::Value { id: id, ty: ty }
+    }
+
+    fn new_label(&mut self) -> ir::BasicBlockId {
+        let id = ir::BasicBlockId(self.label_counter);
+        self.label_counter += 1;
+        id
+    }
+
+    fn push_terminator_label(&mut self, terminator: Option<ir::Terminator>, id: ir::BasicBlockId) {
+        self.items.push(Item::TerminatorAndLabel(terminator, id));
+    }
+
+    fn push_terminator(&mut self, terminator: Option<ir::Terminator>) {
+        let label = self.new_label();
+        self.push_terminator_label(terminator, label);
+    }
+
+    fn push_statement(&mut self, stmt: ir::Statement) {
+        self.items.push(Item::Statement(stmt));
     }
 
     fn register_param(&mut self, name: String, ty: ir::Type, param_index: Option<usize>) -> bool {
@@ -900,30 +846,5 @@ impl<'a> FunctionBuilder<'a> {
                   });
         self.local_counter += 1;
         ir::LocalVarId(id)
-    }
-
-    fn cursor_to_end(&mut self) {
-        self.current_bb_index = self.basic_blocks.len() - 1;
-    }
-
-    fn add_statement(&mut self, stmt: ir::Statement) {
-        self.basic_blocks[self.current_bb_index].stmts.push(stmt);
-    }
-
-    fn change_terminator(&mut self, terminator: TempTerminator) {
-        self.basic_blocks[self.current_bb_index].terminator = terminator;
-    }
-
-    fn terminate_current(&mut self, terminator: TempTerminator) {
-        self.change_terminator(terminator);
-        self.basic_blocks
-            .insert(self.current_bb_index + 1,
-                    TempBasicBlock {
-                        id: ir::BasicBlockId(self.bb_counter),
-                        stmts: Vec::new(),
-                        terminator: TempTerminator::Fallthrough,
-                    });
-        self.current_bb_index += 1;
-        self.bb_counter += 1;
     }
 }

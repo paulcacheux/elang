@@ -8,5 +8,6 @@ expath="utils/$(basename $1).out"
 clang -c ./utils/io.c -o ./utils/io.o
 clang $objpath ./utils/io.o -o $expath
 #./$expath
-#rm $outpath
+rm $optpath
+rm $outpath
 rm $objpath

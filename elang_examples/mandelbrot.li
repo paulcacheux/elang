@@ -75,8 +75,8 @@ fn get_iter(px: int, py: int, x_max: double, y_max: double) -> int {
 
 fn main() -> int {
     let py = 0;
-    let x_max = 1890.0 / 10.0;
-    let y_max = 1080.0 / 10.0;
+    let x_max = 1890.0;
+    let y_max = 1080.0;
 
     print_header(x_max as int, y_max as int);
 
