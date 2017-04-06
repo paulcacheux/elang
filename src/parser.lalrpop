@@ -224,6 +224,7 @@ Term: Expression = {
     IntLiteral => Expression::Literal(Literal::Int(<>)),
     BoolLiteral => Expression::Literal(Literal::Bool(<>)),
     CharLiteral => Expression::Literal(Literal::Char(<>)),
+    "(" ")" => Expression::Literal(Literal::Unit),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
     ArrayLiteral,
