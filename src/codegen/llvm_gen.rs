@@ -225,14 +225,21 @@ impl<'a> FunctionGenerator<'a> {
                     IntMinus => write!(self.writer, "sub i32 0, %temp_{}", sub.id),
                     DoubleMinus => write!(self.writer, "fsub double 0.0, %temp_{}", sub.id),
                     BoolLogicalNot => write!(self.writer, "xor i1 1, %temp_{}", sub.id),
+                    // in fact we represent lvalue and ptr by ptr so AddressOf and PtrDeref are noop
                     AddressOf => {
-                        // must apply to lvalue, but in llvm lvalue = ptr so it works easily
-                        write!(self.writer, "%temp_{}", sub.id)
+                        if let ir::Type::LValue(ty) = sub.ty {
+                            write!(self.writer,
+                                   "getelementptr {0}, {0}* %temp_{1}, i64 0",
+                                   type_to_string(*ty),
+                                   sub.id)
+                        } else {
+                            unreachable!()
+                        }
                     }
                     PtrDeref => {
                         if let ir::Type::Ptr(ty) = sub.ty {
                             write!(self.writer,
-                                   "load {0}, {0}* %temp_{1}",
+                                   "getelementptr {0}, {0}* %temp_{1}, i64 0",
                                    type_to_string(*ty),
                                    sub.id)
                         } else {

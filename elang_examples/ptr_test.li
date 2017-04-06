@@ -1,0 +1,12 @@
+extern fn println_int(int);
+
+fn add12(a: *int) {
+    *a = *a + 12;
+}
+
+fn main() -> int {
+    let a = 30;
+    add12(&a);
+    println_int(a);
+    return 0;
+}

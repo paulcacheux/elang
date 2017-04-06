@@ -478,8 +478,10 @@ fn build_expression(fb: &mut FunctionBuilder,
             }
         }
         ast::Expression::UnOp(code, sub) => {
-            let sub_value = build_expression(fb, *sub)?;
-            let sub_value = build_lvalue_to_rvalue(fb, sub_value);
+            let mut sub_value = build_expression(fb, *sub)?;
+            if code != ast::UnOpCode::AddressOf {
+                sub_value = build_lvalue_to_rvalue(fb, sub_value);
+            }
 
             if let Some((op, ty)) = tyck::unop_tyck(code, &sub_value.ty) {
                 let value = fb.new_temp_value(ty);
