@@ -131,6 +131,18 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
 
             write!(f, "{}temp_{}", op, sub.id)
         }
+        ir::Expression::CastOp(op, expr) => {
+            use ir::CastCode::*;
+            let target_ty = match op {
+                IntToDouble => "double",
+                DoubleToInt => "int",
+                IntToChar => "char",
+                CharToInt => "int",
+                IntToBool => "bool",
+                BoolToInt => "int",
+            };
+            write!(f, "(({})temp_{})", target_ty, expr.id)
+        }
         ir::Expression::ReadArray(array, index) => {
             write!(f, "temp_{}[temp_{}]", array.id, index.id)
         }

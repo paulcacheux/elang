@@ -1,7 +1,11 @@
+extern fn print_char(char);
+extern fn println_int(int);
+extern fn print_int(int);
+
 fn print_header(x_max: int, y_max: int) {
     print_char('P');
     println_int(3);
-    print(x_max);
+    print_int(x_max);
     print_char(' ');
     println_int(y_max);
     println_int(255);
@@ -70,21 +74,20 @@ fn get_iter(px: int, py: int, x_max: double, y_max: double) -> int {
 }
 
 fn main() -> int {
-    let px = 0;
     let py = 0;
-    let x_max = 1890.0 * 4.0;
-    let y_max = 1080.0 * 4.0;
+    let x_max = 1890.0 / 10.0;
+    let y_max = 1080.0 / 10.0;
 
     print_header(x_max as int, y_max as int);
 
     while py < y_max as int {
+        let px = 0;
         while px < x_max as int {
             print_iter(get_iter(px, py, x_max, y_max));
             px = px + 1;
         }
         print_char('\n');
         py = py + 1;
-        px = 0;
     }
     return 0;
 }

@@ -196,6 +196,12 @@ UnOpExpr: Spanned<Expression> = {
             Span(l, r)
         )
     },
+    <l:@L> <expr:SubscriptOrCallExpr> "as" <ty:Spanned<Type>> <r:@R> => {
+        Spanned::new(
+            Expression::Cast(Box::new(expr), ty),
+            Span(l, r)
+        )
+    },
     SubscriptOrCallExpr
 };
 
@@ -268,6 +274,7 @@ extern {
         "return" => lexer::Token::ReturnKeyword,
         "break" => lexer::Token::BreakKeyword,
         "continue" => lexer::Token::ContinueKeyword,
+        "as" => lexer::Token::AsKeyword,
         "(" => lexer::Token::OpenParen,
         ")" => lexer::Token::CloseParen,
         "[" => lexer::Token::OpenSquare,

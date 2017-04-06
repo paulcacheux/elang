@@ -612,6 +612,23 @@ fn build_expression(fb: &mut FunctionBuilder,
                     })
             }
         }
+        ast::Expression::Cast(sub_expr, target_ty) => {
+            let expr_value = build_expression(fb, *sub_expr)?;
+            let expr_value = build_lvalue_to_rvalue(fb, expr_value);
+            let target_ty = build_type(target_ty)?;
+
+            if let Some(code) = tyck::cast_tyck(&expr_value.ty, &target_ty) {
+                let value = fb.new_temp_value(target_ty);
+                fb.add_statement(ir::Statement::Assign(value.clone(), ir::Expression::CastOp(code, expr_value)));
+
+                Ok(value)
+            } else {
+                Err(SyntaxError {
+                    msg: format!("Unknown cast."),
+                    span: expr.span,
+                })
+            }
+        },
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
             if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {

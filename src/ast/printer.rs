@@ -212,6 +212,12 @@ impl ASTPrinter {
                 }
                 self.0 -= 1;
             }
+            Cast(ref expr, ref target_ty) => {
+                println!("CastOp to '{}'", target_ty.inner);
+                self.0 += 1;
+                self.print_expression(expr);
+                self.0 -= 1;
+            }
             Paren(ref expr) => {
                 println!("ParenExpr");
                 self.0 += 1;

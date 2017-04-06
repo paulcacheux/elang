@@ -64,3 +64,16 @@ pub fn unop_tyck(op: ast::UnOpCode, ty: &ir::Type) -> Option<(ir::UnOpCode, ir::
         _ => None,
     }
 }
+
+pub fn cast_tyck(expr_ty: &ir::Type, target_ty: &ir::Type) -> Option<ir::CastCode> {
+    use ir::Type;
+    match (expr_ty, target_ty) {
+        (&Type::Int, &Type::Double) => Some(ir::CastCode::IntToDouble),
+        (&Type::Double, &Type::Int) => Some(ir::CastCode::DoubleToInt),
+        (&Type::Int, &Type::Char) => Some(ir::CastCode::IntToChar),
+        (&Type::Char, &Type::Int) => Some(ir::CastCode::CharToInt),
+        (&Type::Int, &Type::Bool) => Some(ir::CastCode::IntToBool),
+        (&Type::Bool, &Type::Int) => Some(ir::CastCode::BoolToInt),
+        _ => None
+    }
+}

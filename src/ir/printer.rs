@@ -89,6 +89,11 @@ fn print_expr(expr: &Expression) {
             print_value(val);
             print!(")");
         }
+        Expression::CastOp(op, ref val) => {
+            print!("castop({:?}, ", op);
+            print_value(val);
+            print!(")");
+        }
         Expression::ReadArray(ref array, ref index) => {
             print!("readarray(");
             print_value(array);

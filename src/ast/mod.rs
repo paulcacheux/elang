@@ -57,6 +57,7 @@ pub enum Expression {
     BinOp(BinOpCode, Box<Spanned<Expression>>, Box<Spanned<Expression>>),
     UnOp(UnOpCode, Box<Spanned<Expression>>),
     FuncCall(Box<Spanned<Expression>>, Vec<Spanned<Expression>>),
+    Cast(Box<Spanned<Expression>>, Spanned<ParseType>),
     Paren(Box<Spanned<Expression>>),
     Identifier(String),
     Literal(Literal),

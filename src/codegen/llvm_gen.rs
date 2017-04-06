@@ -193,28 +193,28 @@ impl<'a> FunctionGenerator<'a> {
                     let op = match op {
                         PtrAdd => unreachable!(),
                         IntAdd => "add i32",
-                        DoubleAdd => "fadd f64",
+                        DoubleAdd => "fadd double",
                         IntSub => "sub i32",
-                        DoubleSub => "fsub f64",
+                        DoubleSub => "fsub double",
                         IntTimes => "mul i32",
-                        DoubleTimes => "fmul f64",
-                        IntDivide => "div i32",
-                        DoubleDivide => "fdiv f64",
+                        DoubleTimes => "fmul double",
+                        IntDivide => "sdiv i32",
+                        DoubleDivide => "fdiv double",
                         IntMod => "srem i32",
                         IntLess => "icmp slt i32",
-                        DoubleLess => "fcmp olt f64",
+                        DoubleLess => "fcmp olt double",
                         IntLessEqual => "icmp sle i32",
-                        DoubleLessEqual => "fcmp ole f64",
+                        DoubleLessEqual => "fcmp ole double",
                         IntGreater => "icmp sgt i32",
-                        DoubleGreater => "fcmp ogt f64",
+                        DoubleGreater => "fcmp ogt double",
                         IntGreaterEqual => "icmp sge i32",
-                        DoubleGreaterEqual => "fcmp oge f64",
+                        DoubleGreaterEqual => "fcmp oge double",
                         IntEqual => "icmp eq i32",
                         BoolEqual => "icmp eq i1",
-                        DoubleEqual => "fcmp oeq f64",
+                        DoubleEqual => "fcmp oeq double",
                         IntNotEqual => "icmp ne i32",
                         BoolNotEqual => "icmp ne i1",
-                        DoubleNotEqual => "fcmp one f64",
+                        DoubleNotEqual => "fcmp one double",
                     };
                     write!(self.writer, "{} %temp_{}, %temp_{}", op, lhs.id, rhs.id)
                 }
@@ -222,9 +222,9 @@ impl<'a> FunctionGenerator<'a> {
             ir::Expression::UnOp(op, sub) => {
                 use ir::UnOpCode::*;
                 match op {
-                    IntMinus => write!(self.writer, "sub i32 0, {}", sub.id),
-                    DoubleMinus => write!(self.writer, "fsub f64 0.0, {}", sub.id),
-                    BoolLogicalNot => write!(self.writer, "xor i1 1, {}", sub.id),
+                    IntMinus => write!(self.writer, "sub i32 0, %temp_{}", sub.id),
+                    DoubleMinus => write!(self.writer, "fsub double 0.0, %temp_{}", sub.id),
+                    BoolLogicalNot => write!(self.writer, "xor i1 1, %temp_{}", sub.id),
                     AddressOf => {
                         // must apply to lvalue, but in llvm lvalue = ptr so it works easily
                         write!(self.writer, "%temp_{}", sub.id)
@@ -239,6 +239,17 @@ impl<'a> FunctionGenerator<'a> {
                             unreachable!()
                         }
                     }
+                }
+            }
+            ir::Expression::CastOp(op, expr) => {
+                use ir::CastCode::*;
+                match op {
+                    IntToDouble => write!(self.writer, "sitofp {} %temp_{} to double", type_to_string(expr.ty), expr.id),
+                    DoubleToInt => write!(self.writer, "fptosi {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
+                    IntToChar => write!(self.writer, "trunc {} %temp_{} to i8", type_to_string(expr.ty), expr.id),
+                    CharToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
+                    IntToBool => write!(self.writer, "icmp ne {} %temp_{}, 0", type_to_string(expr.ty), expr.id),
+                    BoolToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
                 }
             }
             ir::Expression::ReadArray(array, index) => {
@@ -273,7 +284,7 @@ impl<'a> FunctionGenerator<'a> {
                         write!(self.writer, "select i1 true, i32 {}, i32 0", val)
                     },
                     ir::Literal::Double(val) => {
-                        write!(self.writer, "select i1 true, f64 {}, f64 0.0", val)
+                        write!(self.writer, "select i1 true, double {:.10}, double 0.0", val)
                     },
                     ir::Literal::Bool(val) => {
                         write!(self.writer,
@@ -319,7 +330,7 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Unit => format!("void"),
         ir::Type::Bool => format!("i1"), // cause c you know
         ir::Type::Int => format!("i32"),
-        ir::Type::Double => format!("f64"),
+        ir::Type::Double => format!("double"),
         ir::Type::Char => format!("i8"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Array(sub, size) => format!("[{} x {}]", type_to_string(*sub), size),

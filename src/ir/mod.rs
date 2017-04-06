@@ -56,6 +56,7 @@ pub enum Expression {
     LValueLoad(Value),
     BinOp(BinOpCode, Value, Value),
     UnOp(UnOpCode, Value),
+    CastOp(CastCode, Value),
     ReadArray(Value, Value),
     FuncCall(Value, Vec<Value>),
     Literal(Literal),
@@ -120,6 +121,16 @@ pub enum UnOpCode {
     BoolLogicalNot,
     AddressOf,
     PtrDeref,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CastCode {
+    IntToDouble,
+    DoubleToInt,
+    IntToChar,
+    CharToInt,
+    IntToBool,
+    BoolToInt,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
