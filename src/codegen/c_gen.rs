@@ -141,7 +141,7 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
             };
             write!(f, "(({})temp_{})", target_ty, expr.id)
         }
-        ir::Expression::ReadArray(array, index) => {
+        ir::Expression::IndexArray(array, index) => {
             write!(f, "temp_{}[temp_{}]", array.id, index.id)
         }
         ir::Expression::FuncCall(func, params) => {

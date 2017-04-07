@@ -236,7 +236,7 @@ Term: Expression = {
 
 ArrayLiteral: Expression = {
     "[" <Comma<Expr>> "]" => Expression::ArrayFullLiteral(<>),
-    "[" <expr:Expr> ";" <size:IntLiteral> "]" => Expression::ArrayDefaultLiteral(Box::new(expr), size as usize),
+    "[" <expr:Expr> ";" <size:IntLiteral> "]" => Expression::ArrayDefaultLiteral(Box::new(expr), size),
 };
 
 UnOp: UnOpCode = {

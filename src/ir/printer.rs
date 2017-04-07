@@ -94,8 +94,8 @@ fn print_expr(expr: &Expression) {
             print_value(val);
             print!(")");
         }
-        Expression::ReadArray(ref array, ref index) => {
-            print!("readarray(");
+        Expression::IndexArray(ref array, ref index) => {
+            print!("indexarray(");
             print_value(array);
             print!(", ");
             print_value(index);

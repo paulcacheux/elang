@@ -62,7 +62,7 @@ pub enum Expression {
     Identifier(String),
     Literal(Literal),
     ArrayFullLiteral(Vec<Spanned<Expression>>),
-    ArrayDefaultLiteral(Box<Spanned<Expression>>, usize),
+    ArrayDefaultLiteral(Box<Spanned<Expression>>, i64),
 }
 
 #[derive(Debug, Clone, PartialEq)]

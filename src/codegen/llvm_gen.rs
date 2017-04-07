@@ -182,12 +182,16 @@ impl<'a> FunctionGenerator<'a> {
             }
             ir::Expression::BinOp(op, lhs, rhs) => {
                 if op == ir::BinOpCode::PtrAdd {
-                    write!(self.writer,
-                           "getelementptr {} %temp_{}, {} %temp_{}",
-                           type_to_string(lhs.ty),
-                           lhs.id,
-                           type_to_string(rhs.ty),
-                           rhs.id)
+                    if let ir::Type::Ptr(sub_ty) = lhs.ty {
+                        write!(self.writer,
+                               "getelementptr {0}, {0}* %temp_{1}, {2} %temp_{3}",
+                               type_to_string(*sub_ty),
+                               lhs.id,
+                               type_to_string(rhs.ty),
+                               rhs.id)
+                    } else {
+                        unreachable!()
+                    }
                 } else {
                     use ir::BinOpCode::*;
                     let op = match op {
@@ -259,11 +263,11 @@ impl<'a> FunctionGenerator<'a> {
                     BoolToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
                 }
             }
-            ir::Expression::ReadArray(array, index) => {
-                if let ir::Type::Array(ty, _) = array.ty {
+            ir::Expression::IndexArray(array, index) => {
+                if let ir::Type::LValue(array_ty) = array.ty {
                     write!(self.writer,
-                           "getelementptr {0}, {0}* %temp_{1}, i32 %temp_{2}",
-                           type_to_string(*ty),
+                           "getelementptr {0}, {0}* %temp_{1}, i32 0, i32 %temp_{2}",
+                           type_to_string(*array_ty),
                            array.id,
                            index.id)
                 } else {
@@ -340,7 +344,7 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Double => format!("double"),
         ir::Type::Char => format!("i8"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
-        ir::Type::Array(sub, size) => format!("[{} x {}]", type_to_string(*sub), size),
+        ir::Type::Array(sub, size) => format!("[{} x {}]", size, type_to_string(*sub)),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {
             format!("{}({})",

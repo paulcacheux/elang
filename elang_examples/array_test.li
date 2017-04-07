@@ -1,0 +1,50 @@
+extern fn println_int(int);
+
+fn print_array(array: *int, size: int) {
+    let i = 0;
+    while i < size {
+        println_int(*(array + i));
+        i = i + 1;
+    }
+}
+
+fn swap(a: *int, b: *int) {
+    let swap_val = *b;
+    *b = *a;
+    *a = swap_val;
+}
+
+fn part(array: *int, first: int, last: int, piv: int) -> int {
+    swap(array + piv, array + (last - 1));
+
+    let j = first;
+    let i = first;
+    while i < last - 1 {
+        if *(array + i) <= *(array + (last - 1)) {
+            swap(array + i, array + j);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    swap(array + (last - 1), array + j);
+    return j;
+}
+
+fn quicksort(array: *int, first: int, last: int) {
+    if first < last - 1 {
+        let piv = first; # non optimal
+        piv = part(array, first, last, piv);
+        quicksort(array, first, piv);
+        quicksort(array, piv + 1, last);
+    }
+}
+
+fn main() -> int {
+    let array = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
+    print_array(&array[0], 10);
+    quicksort(&array[0], 0, 10);
+    print_array(&array[0], 10);
+
+    return 0;
+}

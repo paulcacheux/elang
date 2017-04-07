@@ -57,7 +57,7 @@ pub enum Expression {
     BinOp(BinOpCode, Value, Value),
     UnOp(UnOpCode, Value),
     CastOp(CastCode, Value),
-    ReadArray(Value, Value),
+    IndexArray(Value, Value),
     FuncCall(Value, Vec<Value>),
     Literal(Literal),
 }
