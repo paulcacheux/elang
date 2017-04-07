@@ -210,12 +210,12 @@ UnOpExpr: Spanned<Expression> = {
 };
 
 SubscriptOrCallExpr: Spanned<Expression> = {
-    <l:@L> <lhs:Spanned<Term>> "[" <rhs:Expr> "]" <r:@R> =>
+    <l:@L> <lhs:SubscriptOrCallExpr> "[" <rhs:Expr> "]" <r:@R> =>
         Spanned::new(
             Expression::Subscript(Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         ),
-    <l:@L> <lhs:Spanned<Term>> "(" <rhs:Comma<Expr>> ")" <r:@R> =>
+    <l:@L> <lhs:SubscriptOrCallExpr> "(" <rhs:Comma<Expr>> ")" <r:@R> =>
         Spanned::new(
             Expression::FuncCall(Box::new(lhs), rhs),
             Span(l, r)
