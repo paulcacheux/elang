@@ -13,6 +13,7 @@ pub enum Declaration {
     ExternFunction {
         name: String,
         params: Vec<Spanned<ParseType>>,
+        variadic: bool,
         return_ty: Spanned<ParseType>,
     },
     Function {

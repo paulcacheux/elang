@@ -26,6 +26,7 @@ pub enum Token {
     Arrow,
     Comma,
     Dot,
+    DotDot,
     SemiColon,
     Colon,
     Plus,
@@ -103,7 +104,6 @@ impl<'input> Iterator for Lexer<'input> {
             Some((i, '[')) => Some(Ok((i, Token::OpenSquare, i + 1))),
             Some((i, ']')) => Some(Ok((i, Token::CloseSquare, i + 1))),
 
-            Some((i, '.')) => Some(Ok((i, Token::Dot, i + 1))),
             Some((i, ',')) => Some(Ok((i, Token::Comma, i + 1))),
             Some((i, ';')) => Some(Ok((i, Token::SemiColon, i + 1))),
             Some((i, ':')) => Some(Ok((i, Token::Colon, i + 1))),
@@ -113,6 +113,12 @@ impl<'input> Iterator for Lexer<'input> {
             Some((i, '/')) => Some(Ok((i, Token::Slash, i + 1))),
             Some((i, '%')) => Some(Ok((i, Token::Modulo, i + 1))),
 
+            Some((i, '.')) => {
+                Some(Ok(match self.if_next('.', Token::DotDot, Token::Dot) {
+                            Ok(tok) => (i, tok, i + 2),
+                            Err(tok) => (i, tok, i + 1),
+                        }))
+            }
             Some((i, '-')) => {
                 Some(Ok(match self.if_next('>', Token::Arrow, Token::Minus) {
                             Ok(tok) => (i, tok, i + 2),

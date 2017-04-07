@@ -36,9 +36,10 @@ impl ASTPrinter {
             ExternFunction {
                 ref name,
                 ref params,
+                ref variadic,
                 ref return_ty,
             } => {
-                println!("ExternFunctionDecl '{}' '{}'", name, return_ty.inner);
+                println!("ExternFunctionDecl '{}' '{}' var:{:?}", name, return_ty.inner, variadic);
                 self.0 += 1;
                 for param in params {
                     self.print_tab();

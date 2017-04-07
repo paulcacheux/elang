@@ -79,6 +79,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
         ast::Declaration::ExternFunction {
             name,
             params,
+            variadic,
             return_ty,
         } => {
             let return_ty = build_type(return_ty)?;
@@ -100,7 +101,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
-            Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
+            Ok(ir::Declaration::ExternFunction { name: name, ty: ty, variadic: variadic })
         }
         ast::Declaration::Function {
             name,

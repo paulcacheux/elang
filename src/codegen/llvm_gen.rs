@@ -18,13 +18,14 @@ fn gen_declaration<F: Write>(f: &mut F,
                              globals: &mut HashMap<String, ir::FunctionType>)
                              -> io::Result<()> {
     match declaration {
-        ir::Declaration::ExternFunction { name, ty } => {
+        ir::Declaration::ExternFunction { name, ty, variadic } => {
             globals.insert(name.clone(), ty.clone());
             writeln!(f,
-                     "declare {} @{}({})",
+                     "declare {} @{}({}{})",
                      type_to_string(*ty.return_ty),
                      name,
-                     ty.params_ty.into_iter().map(type_to_string).join(", "))?;
+                     ty.params_ty.into_iter().map(type_to_string).join(", "),
+                     if variadic { ", ..." } else { "" })?;
         }
         ir::Declaration::Function {
             name,

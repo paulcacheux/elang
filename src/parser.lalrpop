@@ -13,10 +13,11 @@ Declaration: Spanned<Declaration> = {
 };
 
 ExternFuncDecl: Declaration = {
-    "extern" "fn" <id:Identifier> "(" <params:Comma<Spanned<Type>>> ")" <r:@R> <ty:("->" <Spanned<Type>>)?> ";"
+    "extern" "fn" <id:Identifier> "(" <params:Comma<Spanned<Type>>> <variadic:".."?>")" <r:@R> <ty:("->" <Spanned<Type>>)?> ";"
     => Declaration::ExternFunction {
         name: id,
         params: params,
+        variadic: variadic.is_some(),
         return_ty: ty.unwrap_or(Spanned::new(ParseType::Unit, Span(r, r + 1))),
     }
 };
@@ -288,6 +289,7 @@ extern {
         "->" => lexer::Token::Arrow,
         "," => lexer::Token::Comma,
         "." => lexer::Token::Dot,
+        ".." => lexer::Token::DotDot,
         ";" => lexer::Token::SemiColon,
         ":" => lexer::Token::Colon,
         "+" => lexer::Token::Plus,

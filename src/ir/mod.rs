@@ -13,7 +13,7 @@ pub struct TranslationUnit {
 
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    ExternFunction { name: String, ty: FunctionType },
+    ExternFunction { name: String, ty: FunctionType, variadic: bool },
     Function {
         name: String,
         ty: FunctionType,
