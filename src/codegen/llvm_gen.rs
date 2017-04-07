@@ -89,9 +89,10 @@ impl<'a> FunctionGenerator<'a> {
         self.locals.insert(local.id.clone(), local.ty.clone());
 
         writeln!(self.var_writer,
-                 "\t%local_{} = alloca {}",
+                 "\t%local_{} = alloca {}, i32 {}",
                  local.id.0,
-                 type_to_string(local.ty.clone()))?;
+                 type_to_string(local.ty.clone()),
+                 local.size)?;
         if let Some(index) = local.param_index {
             writeln!(self.var_writer,
                      "\tstore {0} %arg{1}, {0}* %local_{2}",
@@ -263,17 +264,6 @@ impl<'a> FunctionGenerator<'a> {
                     BoolToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
                 }
             }
-            ir::Expression::IndexArray(array, index) => {
-                if let ir::Type::LValue(array_ty) = array.ty {
-                    write!(self.writer,
-                           "getelementptr {0}, {0}* %temp_{1}, i32 0, i32 %temp_{2}",
-                           type_to_string(*array_ty),
-                           array.id,
-                           index.id)
-                } else {
-                    unreachable!()
-                }
-            }
             ir::Expression::FuncCall(func, params) => {
                 if let ir::Type::Function(func_ty) = func.ty {
                     write!(self.writer,
@@ -344,7 +334,6 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Double => format!("double"),
         ir::Type::Char => format!("i8"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
-        ir::Type::Array(sub, size) => format!("[{} x {}]", size, type_to_string(*sub)),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {
             format!("{}({})",

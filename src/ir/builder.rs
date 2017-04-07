@@ -364,32 +364,26 @@ fn build_expression(fb: &mut FunctionBuilder,
         }
         ast::Expression::Subscript(array, index) => {
             let array_value = build_expression(fb, *array)?;
-            if let ir::Type::LValue(array_ty) = array_value.ty.clone() {
-                let index_value = build_expression(fb, *index)?;
-                let index_value = build_lvalue_to_rvalue(fb, index_value);
+            let array_value = build_lvalue_to_rvalue(fb, array_value);
+            let index_value = build_expression(fb, *index)?;
+            let index_value = build_lvalue_to_rvalue(fb, index_value);
 
-                if let ir::Type::Array(sub, _) = *array_ty {
-                    if ir::Type::Int == index_value.ty {
-                        let value = fb.new_temp_value(ir::Type::LValue(sub));
-                        fb.push_statement(ir::Statement::Assign(value.clone(),
-                                                               ir::Expression::IndexArray(array_value,
-                                                                                         index_value)));
-                        Ok(value)
-                    } else {
-                        Err(SyntaxError {
-                                msg: format!("Index must be of int type."),
-                                span: expr.span,
-                            })
-                    }
+            if let ir::Type::Ptr(sub) = array_value.ty.clone() {
+                if ir::Type::Int == index_value.ty {
+                    let new_ptr_value = fb.new_temp_value(array_value.ty.clone());
+                    fb.push_statement(ir::Statement::Assign(new_ptr_value.clone(), ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value, index_value)));
+                    let value = fb.new_temp_value(ir::Type::LValue(sub));
+                    fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::UnOp(ir::UnOpCode::PtrDeref, new_ptr_value)));
+                    Ok(value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("Subscript to a non-array."),
+                            msg: format!("Index must be of int type."),
                             span: expr.span,
                         })
                 }
             } else {
                 Err(SyntaxError {
-                        msg: format!("Subscript must apply to a lvalue."),
+                        msg: format!("Subscript to a non-ptr."),
                         span: expr.span,
                     })
             }
@@ -580,65 +574,97 @@ fn build_expression(fb: &mut FunctionBuilder,
             Ok(value)
         }
         ast::Expression::ArrayFullLiteral(exprs) => {
-            if exprs.len() == 0 {
+            let mut values = Vec::with_capacity(exprs.len());
+            let mut spans = Vec::with_capacity(exprs.len());
+            for expr in exprs {
+                spans.push(expr.span);
+                let expr_value = build_expression(fb, expr)?;
+                let expr_value = build_lvalue_to_rvalue(fb, expr_value);
+                values.push(expr_value);
+            }
+
+            if values.len() == 0 {
                 return Err(SyntaxError {
-                    msg: format!("Empty array literal. Can't compute type."),
+                    msg: format!("Empty array literal."),
                     span: expr.span,
                 })
             }
 
-            let mut values = Vec::with_capacity(exprs.len());
-            let mut spans = Vec::with_capacity(exprs.len());
-
-            for expr in exprs {
-                spans.push(expr.span);
-                let value = build_expression(fb, expr)?;
-                let value = build_lvalue_to_rvalue(fb, value);
-                values.push(value);
-            }
+            let expr_ty = values.first().unwrap().ty.clone();
+            let ptr_ty = ir::Type::Ptr(Box::new(expr_ty.clone()));
 
             for i in 1..values.len() {
-                if values[i].ty != values[0].ty {
+                if values[i].ty != values[1].ty {
                     return Err(SyntaxError {
-                        msg: format!("Mismatching types in array literal."),
+                        msg: format!("Msimatching type."),
                         span: spans[i],
                     })
                 }
             }
 
-            let expr_ty = values.first().unwrap().ty.clone();
-            let array_ty = ir::Type::Array(Box::new(expr_ty), values.len());
-
-            let array_id = fb.register_local_array(array_ty.clone());
-            let array_value = fb.new_temp_value(ir::Type::LValue(Box::new(array_ty.clone())));
-            fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::LocalVarLoad(array_id)));
+            let array_id = fb.register_local_array(expr_ty.clone(), values.len());
+            let array_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
+            fb.push_statement(ir::Statement::Assign(array_lvalue.clone(), ir::Expression::LocalVarLoad(array_id)));
+            let array_value = fb.new_temp_value(ptr_ty.clone());
+            fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::UnOp(ir::UnOpCode::AddressOf, array_lvalue)));
 
             for (i, value) in values.into_iter().enumerate() {
                 let index_value = fb.new_temp_value(ir::Type::Int);
                 fb.push_statement(ir::Statement::Assign(index_value.clone(), ir::Expression::Literal(ir::Literal::Int(i as i64))));
-                let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(value.ty.clone())));
-                fb.push_statement(ir::Statement::Assign(lvalue.clone(), ir::Expression::IndexArray(array_value.clone(), index_value)));
-                fb.push_statement(ir::Statement::LValueSet(lvalue, value));
+
+                let ptr_value = fb.new_temp_value(ptr_ty.clone());
+                fb.push_statement(ir::Statement::Assign(
+                    ptr_value.clone(),
+                    ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value.clone(), index_value)
+                ));
+
+                let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
+                fb.push_statement(ir::Statement::Assign(
+                    lvalue.clone(),
+                    ir::Expression::UnOp(ir::UnOpCode::PtrDeref, ptr_value)
+                ));
+
+                fb.push_statement(ir::Statement::LValueSet(
+                    lvalue,
+                    value.clone()
+                ));
             }
 
             Ok(array_value)
+
         }
         ast::Expression::ArrayDefaultLiteral(expr, size) => {
             let expr_value = build_expression(fb, *expr)?;
             let expr_value = build_lvalue_to_rvalue(fb, expr_value);
 
-            let array_ty = ir::Type::Array(Box::new(expr_value.ty.clone()), size as usize);
+            let ptr_ty = ir::Type::Ptr(Box::new(expr_value.ty.clone()));
 
-            let array_id = fb.register_local_array(array_ty.clone());
-            let array_value = fb.new_temp_value(ir::Type::LValue(Box::new(array_ty.clone())));
-            fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::LocalVarLoad(array_id)));
+            let array_id = fb.register_local_array(expr_value.ty.clone(), size as usize);
+            let array_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_value.ty.clone())));
+            fb.push_statement(ir::Statement::Assign(array_lvalue.clone(), ir::Expression::LocalVarLoad(array_id)));
+            let array_value = fb.new_temp_value(ptr_ty.clone());
+            fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::UnOp(ir::UnOpCode::AddressOf, array_lvalue)));
 
             for i in 0..size {
                 let index_value = fb.new_temp_value(ir::Type::Int);
                 fb.push_statement(ir::Statement::Assign(index_value.clone(), ir::Expression::Literal(ir::Literal::Int(i))));
+
+                let ptr_value = fb.new_temp_value(ptr_ty.clone());
+                fb.push_statement(ir::Statement::Assign(
+                    ptr_value.clone(),
+                    ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value.clone(), index_value)
+                ));
+
                 let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_value.ty.clone())));
-                fb.push_statement(ir::Statement::Assign(lvalue.clone(), ir::Expression::IndexArray(array_value.clone(), index_value)));
-                fb.push_statement(ir::Statement::LValueSet(lvalue, expr_value.clone()));
+                fb.push_statement(ir::Statement::Assign(
+                    lvalue.clone(),
+                    ir::Expression::UnOp(ir::UnOpCode::PtrDeref, ptr_value)
+                ));
+
+                fb.push_statement(ir::Statement::LValueSet(
+                    lvalue,
+                    expr_value.clone()
+                ));
             }
 
             Ok(array_value)
@@ -702,7 +728,6 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
 fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError> {
     match parse_ty.inner {
         ast::ParseType::Unit => Ok(ir::Type::Unit),
-        ast::ParseType::Array(sub, size) => Ok(ir::Type::Array(Box::new(build_type(*sub)?), size)),
         ast::ParseType::Ptr(sub) => Ok(ir::Type::Ptr(Box::new(build_type(*sub)?))),
         ast::ParseType::Lit(lit) => {
             match lit.as_str() {
@@ -893,6 +918,7 @@ impl<'a> FunctionBuilder<'a> {
             .push(ir::LocalVar {
                       id: ir::LocalVarId(self.local_counter),
                       ty: ty,
+                      size: 1,
                       param_index: param_index,
                   });
         self.local_counter += 1;
@@ -909,17 +935,19 @@ impl<'a> FunctionBuilder<'a> {
             .push(ir::LocalVar {
                       id: id,
                       ty: ir::Type::Bool,
+                      size: 1,
                       param_index: None,
                   });
         self.local_counter += 1;
         id
     }
 
-    fn register_local_array(&mut self, array_ty: ir::Type) -> ir::LocalVarId {
+    fn register_local_array(&mut self, ty: ir::Type, size: usize) -> ir::LocalVarId {
         let id = ir::LocalVarId(self.local_counter);
         self.locals.push(ir::LocalVar {
             id: id,
-            ty: array_ty,
+            ty: ty,
+            size: size,
             param_index: None,
         });
         self.local_counter += 1;

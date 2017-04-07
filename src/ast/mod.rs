@@ -128,7 +128,6 @@ impl<T> Deref for Spanned<T> {
 pub enum ParseType {
     Unit,
     Lit(String),
-    Array(Box<Spanned<ParseType>>, usize),
     Ptr(Box<Spanned<ParseType>>),
 }
 
@@ -137,7 +136,6 @@ impl fmt::Display for ParseType {
         match *self {
             ParseType::Unit => write!(f, "()"),
             ParseType::Lit(ref lit) => write!(f, "{}", lit),
-            ParseType::Array(ref sub, s) => write!(f, "[{}, {}]", sub.inner, s),
             ParseType::Ptr(ref sub) => write!(f, "*{}", sub.inner),
         }
     }

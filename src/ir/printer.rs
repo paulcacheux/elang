@@ -94,13 +94,6 @@ fn print_expr(expr: &Expression) {
             print_value(val);
             print!(")");
         }
-        Expression::IndexArray(ref array, ref index) => {
-            print!("indexarray(");
-            print_value(array);
-            print!(", ");
-            print_value(index);
-            print!(")");
-        }
         Expression::FuncCall(ref func, ref params) => {
             print!("call ");
             print_value(func);

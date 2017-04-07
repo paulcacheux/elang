@@ -141,9 +141,6 @@ fn gen_expr<F: Write>(f: &mut F, expr: ir::Expression) -> io::Result<()> {
             };
             write!(f, "(({})temp_{})", target_ty, expr.id)
         }
-        ir::Expression::IndexArray(array, index) => {
-            write!(f, "temp_{}[temp_{}]", array.id, index.id)
-        }
         ir::Expression::FuncCall(func, params) => {
             write!(f,
                    "temp_{}({})",
@@ -193,7 +190,6 @@ fn type_to_string_with_name(ty: ir::Type, name: String) -> String {
         ir::Type::Double => format!("double {}", name),
         ir::Type::Char => format!("char {}", name),
         ir::Type::LValue(sub) => format!("{} *{}", type_to_string(*sub), name),
-        ir::Type::Array(sub, size) => format!("{} {}[{}]", type_to_string(*sub), name, size),
         ir::Type::Ptr(sub) => format!("{} *{}", type_to_string(*sub), name),
         ir::Type::Function(func) => {
             format!("{}(*{})({})",
@@ -215,7 +211,6 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::Double => format!("double"),
         ir::Type::Char => format!("char"),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
-        ir::Type::Array(sub, size) => format!("{}[{}]", type_to_string(*sub), size),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {
             format!("{}(*)({})",

@@ -26,6 +26,7 @@ pub enum Declaration {
 pub struct LocalVar {
     pub id: LocalVarId,
     pub ty: Type,
+    pub size: usize,
     pub param_index: Option<usize>,
 }
 
@@ -57,7 +58,6 @@ pub enum Expression {
     BinOp(BinOpCode, Value, Value),
     UnOp(UnOpCode, Value),
     CastOp(CastCode, Value),
-    IndexArray(Value, Value),
     FuncCall(Value, Vec<Value>),
     Literal(Literal),
 }
@@ -141,7 +141,6 @@ pub enum Type {
     Double,
     Char,
     LValue(Box<Type>),
-    Array(Box<Type>, usize),
     Ptr(Box<Type>),
     Function(FunctionType),
 }
@@ -161,7 +160,6 @@ impl fmt::Display for Type {
             Type::Double => write!(f, "double"),
             Type::Char => write!(f, "char"),
             Type::LValue(ref sub) => write!(f, "&{}", *sub),
-            Type::Array(ref sub, size) => write!(f, "[{}; {}]", *sub, size),
             Type::Ptr(ref sub) => write!(f, "*{}", *sub),
             Type::Function(ref func) => write!(f, "{}", func),
         }
