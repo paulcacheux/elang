@@ -40,6 +40,13 @@ pub enum Statement {
         cond: Spanned<Expression>,
         stmt: Spanned<CompoundStatement>,
     },
+    For {
+        name: String,
+        init_expr: Spanned<Expression>,
+        cond_expr: Spanned<Expression>,
+        step_expr: Spanned<Expression>,
+        stmt: Spanned<CompoundStatement>,
+    },
     If {
         if_branch: (Spanned<Expression>, Spanned<CompoundStatement>),
         elseif_branches: Vec<(Spanned<Expression>, Spanned<CompoundStatement>)>,

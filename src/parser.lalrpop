@@ -39,6 +39,7 @@ ParamDecl: (Spanned<String>, Spanned<ParseType>) = {
 Statement: Spanned<Statement> = {
     Spanned<LetStmt>,
     Spanned<LoopStmt>,
+    Spanned<ForStmt>,
     Spanned<WhileStmt>,
     Spanned<IfStmt>,
     Spanned<BreakStmt>,
@@ -68,6 +69,16 @@ LetStmt: Statement = {
 
 LoopStmt: Statement = {
     "loop" <Spanned<CompoundStmt>> => Statement::Loop { stmt: <> }
+};
+
+ForStmt: Statement = {
+    "for" <name:Identifier> "=" <init:Expr> ";" <cond:Expr> ";" <step:Expr> <stmt:Spanned<CompoundStmt>> => Statement::For {
+        name: name,
+        init_expr: init,
+        cond_expr: cond,
+        step_expr: step,
+        stmt: stmt
+    }
 };
 
 WhileStmt: Statement = {
@@ -273,6 +284,7 @@ extern {
         "extern" => lexer::Token::ExternKeyword,
         "fn" => lexer::Token::FnKeyword,
         "let" => lexer::Token::LetKeyword,
+        "for" => lexer::Token::ForKeyword,
         "while" => lexer::Token::WhileKeyword,
         "loop" => lexer::Token::LoopKeyword,
         "if" => lexer::Token::IfKeyword,

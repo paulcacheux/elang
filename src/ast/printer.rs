@@ -114,6 +114,15 @@ impl ASTPrinter {
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
             }
+            For { ref name, ref init_expr, ref cond_expr, ref step_expr, ref stmt } => {
+                println!("ForStmt '{}'", name);
+                self.0 += 1;
+                self.print_expression(init_expr);
+                self.print_expression(cond_expr);
+                self.print_expression(step_expr);
+                self.print_compound_statement(stmt);
+                self.0 -= 1;
+            }
             If {
                 ref if_branch,
                 ref elseif_branches,

@@ -251,6 +251,30 @@ fn build_statement(fb: &mut FunctionBuilder,
             fb.symbol_table.end_local_scope();
             Ok(())
         }
+        ast::Statement::For { name, init_expr, cond_expr, step_expr, stmt: mut sub_stmt } => {
+            //TODO: maybe we need a phase b/ ast and ir
+            let mut stmts = Vec::new();
+            let init_span = init_expr.span;
+            let step_span = step_expr.span;
+
+            stmts.push(Spanned::new(
+                ast::Statement::Let { name: name, ty: None, expr: init_expr },
+                init_span
+            ));
+            sub_stmt.inner.0.push(Spanned::new(
+                ast::Statement::Expression { expr: step_expr },
+                step_span
+            ));
+            stmts.push(Spanned::new(
+                ast::Statement::While { cond: cond_expr, stmt: sub_stmt },
+                stmt.span
+            ));
+
+            build_compound_statement(fb, Spanned::new(
+                ast::CompoundStatement(stmts),
+                stmt.span
+            ))
+        }
         ast::Statement::If {
             if_branch,
             elseif_branches,
