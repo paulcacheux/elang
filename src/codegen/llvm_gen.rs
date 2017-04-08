@@ -18,14 +18,14 @@ fn gen_declaration<F: Write>(f: &mut F,
                              globals: &mut HashMap<String, ir::FunctionType>)
                              -> io::Result<()> {
     match declaration {
-        ir::Declaration::ExternFunction { name, ty, variadic } => {
+        ir::Declaration::ExternFunction { name, ty } => {
             globals.insert(name.clone(), ty.clone());
             writeln!(f,
                      "declare {} @{}({}{})",
                      type_to_string(*ty.return_ty),
                      name,
                      ty.params_ty.into_iter().map(type_to_string).join(", "),
-                     if variadic { ", ..." } else { "" })?;
+                     if ty.variadic { ", ..." } else { "" })?;
         }
         ir::Declaration::Function {
             name,
@@ -266,19 +266,13 @@ impl<'a> FunctionGenerator<'a> {
                 }
             }
             ir::Expression::FuncCall(func, params) => {
-                if let ir::Type::Function(func_ty) = func.ty {
-                    write!(self.writer,
-                           "call {} %temp_{}({})",
-                           type_to_string(*func_ty.return_ty),
-                           func.id,
-                           params
-                               .into_iter()
-                               .zip(func_ty.params_ty.into_iter().map(type_to_string))
-                               .map(|(val, ty)| format!("{} %temp_{}", ty, val.id))
-                               .join(", "))
-                } else {
-                    unreachable!()
-                }
+                write!(self.writer,
+                       "call {} %temp_{}({})",
+                       type_to_string(func.ty),
+                       func.id,
+                       params.into_iter()
+                             .map(|val| format!("{} %temp_{}", type_to_string(val.ty), val.id))
+                             .join(", "))
             }
             ir::Expression::Literal(lit) => {
                 match lit {
@@ -337,12 +331,13 @@ fn type_to_string(ty: ir::Type) -> String {
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {
-            format!("{}({})",
+            format!("{}({}{})",
                     type_to_string(*func.return_ty),
                     func.params_ty
                         .into_iter()
                         .map(type_to_string)
-                        .join(", "))
+                        .join(", "),
+                    if func.variadic { ", ..." } else { "" })
         }
     }
 }

@@ -7,6 +7,7 @@ expath="utils/$(basename $1).out"
 /usr/local/opt/llvm@4/bin/llc -filetype=obj $optpath -o $objpath
 clang -c ./utils/io.c -o ./utils/io.o
 clang $objpath ./utils/io.o -o $expath
+#clang $objpath -o $expath
 #./$expath
 rm $optpath
 rm $outpath

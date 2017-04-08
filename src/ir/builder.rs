@@ -92,6 +92,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             let ty = ir::FunctionType {
                 return_ty: Box::new(return_ty),
                 params_ty: param_types,
+                variadic: variadic,
             };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
@@ -101,7 +102,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
-            Ok(ir::Declaration::ExternFunction { name: name, ty: ty, variadic: variadic })
+            Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
         }
         ast::Declaration::Function {
             name,
@@ -121,6 +122,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             let ty = ir::FunctionType {
                 return_ty: Box::new(return_ty),
                 params_ty: param_types,
+                variadic: false,
             };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
@@ -512,18 +514,28 @@ fn build_expression(fb: &mut FunctionBuilder,
                     param_values.push(param);
                 }
 
-                if param_ty == func_ty.params_ty {
-                    let value = fb.new_temp_value(*func_ty.return_ty);
-                    fb.push_statement(ir::Statement::Assign(value.clone(),
-                                                           ir::Expression::FuncCall(func_value,
-                                                                                    param_values)));
-                    Ok(value)
-                } else {
-                    Err(SyntaxError {
-                            msg: format!("Mismatching params."),
+                if param_ty.len() < func_ty.params_ty.len() {
+                    return Err(SyntaxError {
+                        msg: format!("Mismatching params len."),
+                        span: expr.span,
+                    })
+                }
+
+                for (ty1, ty2) in param_ty.iter().zip(func_ty.params_ty.iter()) {
+                    if ty1 != ty2 {
+                        return Err(SyntaxError {
+                            msg: format!("Mismatching param type."),
                             span: expr.span,
                         })
+                    }
                 }
+
+                let value = fb.new_temp_value(*func_ty.return_ty);
+                fb.push_statement(ir::Statement::Assign(
+                    value.clone(),
+                    ir::Expression::FuncCall(func_value, param_values)
+                ));
+                Ok(value)
             } else {
                 Err(SyntaxError {
                         msg: format!("Not callable."),
@@ -573,6 +585,54 @@ fn build_expression(fb: &mut FunctionBuilder,
             let value = fb.new_temp_value(ty);
             fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(lit)));
             Ok(value)
+        }
+        ast::Expression::StringLiteral(val) => {
+            // TODO: this is really uggly
+            let mut string_exprs = Vec::with_capacity(val.len());
+            let mut slash = false;
+            for c in val.chars() {
+                if slash {
+                    let c = match c {
+                        '\'' | '\"' => c,
+                        'a' => '\x07',
+                        'b' => '\x08',
+                        'f' => '\x0c',
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        'v' => '\x0b',
+                        '0' => '\0',
+                        _ => return Err(SyntaxError {
+                            msg: format!("Invalid escape char '{}'.", c),
+                            span: expr.span
+                        })
+                    };
+                    slash = false;
+
+                    string_exprs.push(Spanned::new(
+                        ast::Expression::Literal(ast::Literal::Char(c.to_string())),
+                        expr.span
+                    ));
+                } else {
+                    if c == '\\' {
+                        slash = true;
+                    } else {
+                        string_exprs.push(Spanned::new(
+                            ast::Expression::Literal(ast::Literal::Char(c.to_string())),
+                            expr.span
+                        ));
+                    }
+                }
+            }
+            string_exprs.push(Spanned::new(
+                ast::Expression::Literal(ast::Literal::Char(String::from("\0"))),
+                expr.span
+            ));
+
+            build_expression(fb, Spanned::new(
+                ast::Expression::ArrayFullLiteral(string_exprs),
+                expr.span
+            ))
         }
         ast::Expression::ArrayFullLiteral(exprs) => {
             let mut values = Vec::with_capacity(exprs.len());

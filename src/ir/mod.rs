@@ -13,7 +13,7 @@ pub struct TranslationUnit {
 
 #[derive(Debug, Clone)]
 pub enum Declaration {
-    ExternFunction { name: String, ty: FunctionType, variadic: bool },
+    ExternFunction { name: String, ty: FunctionType },
     Function {
         name: String,
         ty: FunctionType,
@@ -149,6 +149,7 @@ pub enum Type {
 pub struct FunctionType {
     pub return_ty: Box<Type>,
     pub params_ty: Vec<Type>,
+    pub variadic: bool,
 }
 
 impl fmt::Display for Type {
@@ -169,8 +170,9 @@ impl fmt::Display for Type {
 impl fmt::Display for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "({}) -> {}",
+               "({}{}) -> {}",
                self.params_ty.iter().join(", "),
+               if self.variadic { ", .." } else { "" },
                *self.return_ty)
     }
 }

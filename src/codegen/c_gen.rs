@@ -19,13 +19,13 @@ pub fn gen_translation_unit<F: Write>(f: &mut F, tu: ir::TranslationUnit) -> io:
 
 fn gen_declaration<F: Write>(f: &mut F, declaration: ir::Declaration) -> io::Result<()> {
     match declaration {
-        ir::Declaration::ExternFunction { name, ty, variadic } => {
+        ir::Declaration::ExternFunction { name, ty } => {
             writeln!(f,
                      "extern {} {}({}{});",
                      type_to_string(*ty.return_ty),
                      name,
                      ty.params_ty.into_iter().map(type_to_string).join(", "),
-                     if variadic { ", ..." } else { "" })?;
+                     if ty.variadic { ", ..." } else { "" })?;
         }
         ir::Declaration::Function {
             name,

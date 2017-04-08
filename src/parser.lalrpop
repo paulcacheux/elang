@@ -229,6 +229,7 @@ Term: Expression = {
     IntLiteral => Expression::Literal(Literal::Int(<>)),
     BoolLiteral => Expression::Literal(Literal::Bool(<>)),
     CharLiteral => Expression::Literal(Literal::Char(<>)),
+    StringLiteral => Expression::StringLiteral(<>),
     "(" ")" => Expression::Literal(Literal::Unit),
     Identifier => Expression::Identifier(<>),
     "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
@@ -312,6 +313,7 @@ extern {
         DoubleLiteral => lexer::Token::DoubleLit(<f64>),
         BoolLiteral => lexer::Token::BoolLit(<bool>),
         CharLiteral => lexer::Token::CharLit(<String>),
+        StringLiteral => lexer::Token::StringLit(<String>),
         Identifier => lexer::Token::Identifier(<String>),
     }
 }

@@ -238,6 +238,9 @@ impl ASTPrinter {
                     Literal::Unit => println!("UnitLit"),
                 }
             }
+            StringLiteral(ref lit) => {
+                println!("StringLit {:?}", lit);
+            }
             ArrayFullLiteral(ref values) => {
                 println!("ArrayFullLiteral");
                 self.0 += 1;
