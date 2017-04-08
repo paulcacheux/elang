@@ -1,10 +1,10 @@
 extern fn printf(*char, ..) -> int;
 
-fn println_int(a: int) {
+fn println_int2(a: int) {
     printf("%d\n", a);
 }
 
 fn main() -> int {
-    println_int(42);
+    println_int2(42);
     return 0;
 }

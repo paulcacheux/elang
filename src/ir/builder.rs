@@ -587,21 +587,20 @@ fn build_expression(fb: &mut FunctionBuilder,
             Ok(value)
         }
         ast::Expression::StringLiteral(val) => {
-            // TODO: this is really uggly
-            let mut string_exprs = Vec::with_capacity(val.len());
+            let mut string = Vec::with_capacity(val.len());
             let mut slash = false;
             for c in val.chars() {
                 if slash {
                     let c = match c {
-                        '\'' | '\"' => c,
-                        'a' => '\x07',
-                        'b' => '\x08',
-                        'f' => '\x0c',
-                        'n' => '\n',
-                        'r' => '\r',
-                        't' => '\t',
-                        'v' => '\x0b',
-                        '0' => '\0',
+                        '\'' | '\"' => c as u8,
+                        'a' => b'\x07',
+                        'b' => b'\x08',
+                        'f' => b'\x0c',
+                        'n' => b'\n',
+                        'r' => b'\r',
+                        't' => b'\t',
+                        'v' => b'\x0b',
+                        '0' => b'\0',
                         _ => return Err(SyntaxError {
                             msg: format!("Invalid escape char '{}'.", c),
                             span: expr.span
@@ -609,30 +608,25 @@ fn build_expression(fb: &mut FunctionBuilder,
                     };
                     slash = false;
 
-                    string_exprs.push(Spanned::new(
-                        ast::Expression::Literal(ast::Literal::Char(c.to_string())),
-                        expr.span
-                    ));
+                    string.push(c);
                 } else {
                     if c == '\\' {
                         slash = true;
                     } else {
-                        string_exprs.push(Spanned::new(
-                            ast::Expression::Literal(ast::Literal::Char(c.to_string())),
-                            expr.span
-                        ));
+                        string.push(c as u8);
                     }
                 }
             }
-            string_exprs.push(Spanned::new(
-                ast::Expression::Literal(ast::Literal::Char(String::from("\0"))),
-                expr.span
-            ));
+            string.push(b'\0');
 
-            build_expression(fb, Spanned::new(
-                ast::Expression::ArrayFullLiteral(string_exprs),
-                expr.span
-            ))
+            let mut values = Vec::with_capacity(string.len());
+            for c in string {
+                let value = fb.new_temp_value(ir::Type::Char);
+                fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Char(c))));
+                values.push(value);
+            }
+
+            Ok(build_array_with_values(fb, ir::Type::Char, values))
         }
         ast::Expression::ArrayFullLiteral(exprs) => {
             let mut values = Vec::with_capacity(exprs.len());
@@ -652,7 +646,6 @@ fn build_expression(fb: &mut FunctionBuilder,
             }
 
             let expr_ty = values.first().unwrap().ty.clone();
-            let ptr_ty = ir::Type::Ptr(Box::new(expr_ty.clone()));
 
             for i in 1..values.len() {
                 if values[i].ty != values[1].ty {
@@ -663,36 +656,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 }
             }
 
-            let array_id = fb.register_local_array(expr_ty.clone(), values.len());
-            let array_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
-            fb.push_statement(ir::Statement::Assign(array_lvalue.clone(), ir::Expression::LocalVarLoad(array_id)));
-            let array_value = fb.new_temp_value(ptr_ty.clone());
-            fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::UnOp(ir::UnOpCode::AddressOf, array_lvalue)));
-
-            for (i, value) in values.into_iter().enumerate() {
-                let index_value = fb.new_temp_value(ir::Type::Int);
-                fb.push_statement(ir::Statement::Assign(index_value.clone(), ir::Expression::Literal(ir::Literal::Int(i as i64))));
-
-                let ptr_value = fb.new_temp_value(ptr_ty.clone());
-                fb.push_statement(ir::Statement::Assign(
-                    ptr_value.clone(),
-                    ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value.clone(), index_value)
-                ));
-
-                let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
-                fb.push_statement(ir::Statement::Assign(
-                    lvalue.clone(),
-                    ir::Expression::UnOp(ir::UnOpCode::PtrDeref, ptr_value)
-                ));
-
-                fb.push_statement(ir::Statement::LValueSet(
-                    lvalue,
-                    value.clone()
-                ));
-            }
-
-            Ok(array_value)
-
+            Ok(build_array_with_values(fb, expr_ty, values))
         }
         ast::Expression::ArrayDefaultLiteral(expr, size) => {
             let expr_value = build_expression(fb, *expr)?;
@@ -731,6 +695,40 @@ fn build_expression(fb: &mut FunctionBuilder,
             Ok(array_value)
         }
     }
+}
+
+fn build_array_with_values(fb: &mut FunctionBuilder, expr_ty: ir::Type, values: Vec<ir::Value>) -> ir::Value {
+    let ptr_ty = ir::Type::Ptr(Box::new(expr_ty.clone()));
+
+    let array_id = fb.register_local_array(expr_ty.clone(), values.len());
+    let array_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
+    fb.push_statement(ir::Statement::Assign(array_lvalue.clone(), ir::Expression::LocalVarLoad(array_id)));
+    let array_value = fb.new_temp_value(ptr_ty.clone());
+    fb.push_statement(ir::Statement::Assign(array_value.clone(), ir::Expression::UnOp(ir::UnOpCode::AddressOf, array_lvalue)));
+
+    for (i, value) in values.into_iter().enumerate() {
+        let index_value = fb.new_temp_value(ir::Type::Int);
+        fb.push_statement(ir::Statement::Assign(index_value.clone(), ir::Expression::Literal(ir::Literal::Int(i as i64))));
+
+        let ptr_value = fb.new_temp_value(ptr_ty.clone());
+        fb.push_statement(ir::Statement::Assign(
+            ptr_value.clone(),
+            ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value.clone(), index_value)
+        ));
+
+        let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(expr_ty.clone())));
+        fb.push_statement(ir::Statement::Assign(
+            lvalue.clone(),
+            ir::Expression::UnOp(ir::UnOpCode::PtrDeref, ptr_value)
+        ));
+
+        fb.push_statement(ir::Statement::LValueSet(
+            lvalue,
+            value.clone()
+        ));
+    }
+
+    array_value
 }
 
 fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxError> {
