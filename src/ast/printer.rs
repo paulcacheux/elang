@@ -156,7 +156,7 @@ impl ASTPrinter {
                     self.0 -= 1;
                 }
 
-                if let &Some(ref stmt) = else_branch {
+                if let Some(ref stmt) = *else_branch {
                     self.print_tab();
                     println!("ElseBranch");
                     self.0 += 1;
@@ -263,7 +263,7 @@ impl ASTPrinter {
                 println!("ArrayFullLiteral");
                 self.0 += 1;
                 for expr in values {
-                    self.print_expression(&expr);
+                    self.print_expression(expr);
                 }
                 self.0 -= 1;
             }

@@ -68,7 +68,7 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
     let mut declarations = Vec::new();
 
     for import in tu.imports {
-        let path = pipeline::build_path(import, options);
+        let path = pipeline::build_path(&import, options);
         let imported_tu = pipeline::process_path(path, options, st);
         declarations.extend(imported_tu.declarations);
     }
@@ -667,12 +667,10 @@ fn build_expression(fb: &mut FunctionBuilder,
                     slash = false;
 
                     string.push(c);
+                } else if c == '\\' {
+                    slash = true;
                 } else {
-                    if c == '\\' {
-                        slash = true;
-                    } else {
-                        string.push(c as u8);
-                    }
+                    string.push(c as u8);
                 }
             }
             string.push(b'\0');
@@ -822,12 +820,10 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
                                     }
                                 });
                     slash = false;
+                } else if c == '\\' {
+                    slash = true;
                 } else {
-                    if c == '\\' {
-                        slash = true;
-                    } else {
-                        output.push(c);
-                    }
+                    output.push(c);
                 }
             }
             if output.len() > 1 {

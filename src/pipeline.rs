@@ -27,7 +27,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(buffer)
 }
 
-pub fn build_path(id: String, options: &CompileOptions) -> PathBuf {
+pub fn build_path(id: &String, options: &CompileOptions) -> PathBuf {
     let mut path = options.global_dir.clone();
     path.push(format!("{}.li", id));
     path
@@ -68,13 +68,11 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
         ast::printer::print_ast(&ast_tu);
     }
 
-    let tu = match ir::builder::build_translation_unit(ast_tu, symbol_table, options) {
+    match ir::builder::build_translation_unit(ast_tu, symbol_table, options) {
         Ok(tu) => tu,
         Err(err) => {
             diagnostics::print_diagnostic(&input, err);
             exit(1);
         }
-    };
-
-    tu
+    }
 }
