@@ -363,7 +363,10 @@ fn build_statement(fb: &mut FunctionBuilder,
                 (value, error_span)
             } else {
                 let value = fb.new_temp_value(ir::Type::Unit);
-                fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Unit)));
+                fb.push_statement(ir::Statement::Assign(
+                    value.clone(),
+                    ir::Expression::Literal(ir::Literal::Unit)
+                ));
                 (value, stmt.span)
             };
 
@@ -420,9 +423,15 @@ fn build_expression(fb: &mut FunctionBuilder,
             if let ir::Type::Ptr(sub) = array_value.ty.clone() {
                 if ir::Type::Int == index_value.ty {
                     let new_ptr_value = fb.new_temp_value(array_value.ty.clone());
-                    fb.push_statement(ir::Statement::Assign(new_ptr_value.clone(), ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value, index_value)));
+                    fb.push_statement(ir::Statement::Assign(
+                        new_ptr_value.clone(),
+                        ir::Expression::BinOp(ir::BinOpCode::PtrAdd, array_value, index_value)
+                    ));
                     let value = fb.new_temp_value(ir::Type::LValue(sub));
-                    fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::UnOp(ir::UnOpCode::PtrDeref, new_ptr_value)));
+                    fb.push_statement(ir::Statement::Assign(
+                        value.clone(),
+                        ir::Expression::UnOp(ir::UnOpCode::PtrDeref, new_ptr_value)
+                    ));
                     Ok(value)
                 } else {
                     Err(SyntaxError {
@@ -456,22 +465,35 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
                 let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(final_value_rhs.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+
+                fb.push_statement(ir::Statement::Assign(
+                    final_value_rhs.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
                 fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), false_label);
 
                 let false_value = fb.new_temp_value(ir::Type::Bool);
-                fb.push_statement(ir::Statement::Assign(false_value.clone(), ir::Expression::Literal(ir::Literal::Bool(false))));
+                fb.push_statement(ir::Statement::Assign(
+                    false_value.clone(),
+                    ir::Expression::Literal(ir::Literal::Bool(false))
+                ));
                 let final_value_false =
                     fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(final_value_false.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::Assign(
+                    final_value_false.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_false, false_value));
 
                 fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), final_label);
 
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::Assign(
+                    return_lvalue.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
                                                         ir::Expression::LValueLoad(return_lvalue)));
@@ -492,10 +514,16 @@ fn build_expression(fb: &mut FunctionBuilder,
                                          true_label);
 
                 let true_value = fb.new_temp_value(ir::Type::Bool);
-                fb.push_statement(ir::Statement::Assign(true_value.clone(), ir::Expression::Literal(ir::Literal::Bool(true))));
+                fb.push_statement(ir::Statement::Assign(
+                    true_value.clone(),
+                    ir::Expression::Literal(ir::Literal::Bool(true))
+                ));
                 let final_value_true =
                     fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(final_value_true.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::Assign(
+                    final_value_true.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_true, true_value));
 
                 fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), false_label);
@@ -503,13 +531,20 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
                 let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(final_value_rhs.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+
+                fb.push_statement(ir::Statement::Assign(
+                    final_value_rhs.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
                 fb.push_terminator_label(Some(ir::Terminator::Br(final_label)), final_label);
 
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
-                fb.push_statement(ir::Statement::Assign(return_lvalue.clone(), ir::Expression::LocalVarLoad(logical_result.clone())));
+                fb.push_statement(ir::Statement::Assign(
+                    return_lvalue.clone(),
+                    ir::Expression::LocalVarLoad(logical_result.clone())
+                ));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
                                                         ir::Expression::LValueLoad(return_lvalue)));
@@ -678,7 +713,10 @@ fn build_expression(fb: &mut FunctionBuilder,
             let mut values = Vec::with_capacity(string.len());
             for c in string {
                 let value = fb.new_temp_value(ir::Type::Char);
-                fb.push_statement(ir::Statement::Assign(value.clone(), ir::Expression::Literal(ir::Literal::Char(c))));
+                fb.push_statement(ir::Statement::Assign(
+                    value.clone(),
+                    ir::Expression::Literal(ir::Literal::Char(c))
+                ));
                 values.push(value);
             }
 
@@ -731,7 +769,10 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             for i in 0..size {
                 let index_value = fb.new_temp_value(ir::Type::Int);
-                fb.push_statement(ir::Statement::Assign(index_value.clone(), ir::Expression::Literal(ir::Literal::Int(i))));
+                fb.push_statement(ir::Statement::Assign(
+                    index_value.clone(),
+                    ir::Expression::Literal(ir::Literal::Int(i))
+                ));
 
                 let ptr_value = fb.new_temp_value(ptr_ty.clone());
                 fb.push_statement(ir::Statement::Assign(
