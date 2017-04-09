@@ -12,12 +12,34 @@ use ir;
 
 use ir::builder::SymbolTable;
 
+#[derive(Debug, Clone, Copy)]
+pub enum OutputType {
+    None,
+    C,
+    LLVM,
+    Run,
+}
+
+impl OutputType {
+    pub fn new(ot: &str) -> Option<OutputType> {
+        match ot {
+            "none" => Some(OutputType::None),
+            "c" => Some(OutputType::C),
+            "llvm" => Some(OutputType::LLVM),
+            "run" => Some(OutputType::Run),
+            _ => None
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CompileOptions {
     pub global_dir: PathBuf,
     pub print_ast: bool,
     pub print_ir: bool,
     pub opt: bool,
+    pub output_type: OutputType,
+    pub output_path: Option<PathBuf>,
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {

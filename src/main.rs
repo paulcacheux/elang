@@ -4,7 +4,7 @@ extern crate unicode_xid;
 extern crate lalrpop_util;
 
 use clap::{Arg, App};
-use std::path::Path;
+use std::path::PathBuf;
 
 mod pipeline;
 mod ast;
@@ -13,6 +13,9 @@ mod lexer;
 mod diagnostics;
 mod ir;
 mod codegen;
+mod outer;
+
+use pipeline::{CompileOptions, OutputType};
 
 fn main() {
     let matches = App::new("Elang Compiler")
@@ -38,36 +41,21 @@ fn main() {
                  .long("type")
                  .short("t")
                  .takes_value(true)
-                 .possible_values(&["c", "llvm", "none"]))
+                 .possible_values(&["c", "llvm", "none", "run"]))
         .get_matches();
 
-    let input_path = Path::new(matches.value_of("INPUT").unwrap());
-    let global_dir = input_path.parent().unwrap();
+    let input_path = PathBuf::from(matches.value_of("INPUT").unwrap());
+    let global_dir = input_path.parent().unwrap().to_path_buf();
 
-    let options = pipeline::CompileOptions {
-        global_dir: global_dir.to_path_buf(),
+    let options = CompileOptions {
+        global_dir: global_dir,
         print_ast: matches.is_present("ast"),
         print_ir: matches.is_present("ir"),
         opt: matches.is_present("opt"),
+        output_type: OutputType::new(matches.value_of("output_type").unwrap_or("none")).unwrap(),
+        output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 
     let tu = pipeline::process_main_path(input_path, &options);
-
-    let mut output_writer: Box<std::io::Write> = if let Some(output_path) =
-        matches.value_of("OUTPUT") {
-        Box::new(std::fs::File::create(output_path).unwrap())
-    } else {
-        Box::new(std::io::stdout())
-    };
-
-    match matches.value_of("output_type").unwrap_or("none") {
-        "c" => {
-            codegen::c_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
-        }
-        "llvm" => {
-            codegen::llvm_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
-        }
-        "none" => {}
-        _ => unreachable!(),
-    }
+    outer::main_outer(tu, &options);
 }
