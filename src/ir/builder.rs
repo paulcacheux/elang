@@ -3,6 +3,7 @@ use ir;
 use ast;
 use ast::{Span, Spanned};
 use ir::tyck;
+use pipeline;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {
@@ -17,7 +18,7 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
-    fn new() -> Self {
+    pub fn new() -> Self {
         SymbolTable {
             globals: HashMap::new(),
             locals: Vec::new(),
@@ -60,13 +61,19 @@ impl SymbolTable {
     }
 }
 
-pub fn build_translation_unit(tu: ast::TranslationUnit)
+pub fn build_translation_unit(tu: ast::TranslationUnit, st: &mut SymbolTable, options: &pipeline::CompileOptions)
                               -> Result<ir::TranslationUnit, SyntaxError> {
-    let mut symbol_table = SymbolTable::new();
+    let mut declarations = Vec::new();
 
-    let mut declarations = Vec::with_capacity(tu.declarations.len());
+    for import in tu.imports {
+        let path = pipeline::build_path(import, options);
+        let imported_tu = pipeline::process_path(path, options, st);
+        declarations.extend(imported_tu.declarations);
+    }
+
+    declarations.reserve(tu.declarations.len());
     for decl in tu.declarations {
-        declarations.push(build_declaration(decl, &mut symbol_table)?);
+        declarations.push(build_declaration(decl, st)?);
     }
 
     Ok(ir::TranslationUnit { declarations: declarations })

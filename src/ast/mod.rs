@@ -5,6 +5,7 @@ pub mod printer;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TranslationUnit {
+    pub imports: Vec<String>,
     pub declarations: Vec<Spanned<Declaration>>,
 }
 

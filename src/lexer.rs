@@ -6,6 +6,7 @@ use itertools::Itertools;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
+    ImportKeyword,
     ExternKeyword,
     FnKeyword,
     LetKeyword,
@@ -256,6 +257,7 @@ mod utils {
 
     pub fn identifier_or_keyword(s: String) -> Token {
         match s.as_str() {
+            "import" => Token::ImportKeyword,
             "extern" => Token::ExternKeyword,
             "fn" => Token::FnKeyword,
             "let" => Token::LetKeyword,

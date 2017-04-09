@@ -5,9 +5,7 @@ expath="utils/$(basename $1).out"
 ./target/debug/elang $1 -O -t=llvm -o $outpath
 /usr/local/opt/llvm@4/bin/opt -O3 -S $outpath -o $optpath
 /usr/local/opt/llvm@4/bin/llc -filetype=obj $optpath -o $objpath
-clang -c ./utils/io.c -o ./utils/io.o
-clang $objpath ./utils/io.o -o $expath
-#clang $objpath -o $expath
+clang $objpath -o $expath
 #./$expath
 rm $optpath
 rm $outpath

@@ -4,7 +4,12 @@ use ast::*;
 grammar;
 
 pub TranslationUnit: TranslationUnit = {
-    Declaration* => TranslationUnit { declarations: <> }
+    <imports:Import*> <decls:Declaration*> =>
+        TranslationUnit { imports: imports, declarations: decls }
+};
+
+Import: String = {
+    "import" <Identifier> ";"
 };
 
 Declaration: Spanned<Declaration> = {
@@ -281,6 +286,7 @@ extern {
     type Error = lexer::LexicalError;
 
     enum lexer::Token {
+        "import" => lexer::Token::ImportKeyword,
         "extern" => lexer::Token::ExternKeyword,
         "fn" => lexer::Token::FnKeyword,
         "let" => lexer::Token::LetKeyword,
