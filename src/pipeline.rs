@@ -33,7 +33,9 @@ pub fn build_path(id: String, options: &CompileOptions) -> PathBuf {
     path
 }
 
-pub fn process_main_path<P: AsRef<Path>>(input_path: P, options: &CompileOptions) -> ir::TranslationUnit {
+pub fn process_main_path<P: AsRef<Path>>(input_path: P,
+                                         options: &CompileOptions)
+                                         -> ir::TranslationUnit {
     let mut symbol_table = SymbolTable::new();
     let mut tu = process_path(input_path, options, &mut symbol_table);
 
@@ -48,7 +50,10 @@ pub fn process_main_path<P: AsRef<Path>>(input_path: P, options: &CompileOptions
     tu
 }
 
-pub fn process_path<P: AsRef<Path>>(input_path: P, options: &CompileOptions, symbol_table: &mut SymbolTable) -> ir::TranslationUnit {
+pub fn process_path<P: AsRef<Path>>(input_path: P,
+                                    options: &CompileOptions,
+                                    symbol_table: &mut SymbolTable)
+                                    -> ir::TranslationUnit {
     let input = read_file(input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let ast_tu = match parser::parse_TranslationUnit(lex) {

@@ -56,7 +56,9 @@ pub fn unop_tyck(op: ast::UnOpCode, ty: &ir::Type) -> Option<(ir::UnOpCode, ir::
         (Minus, &Type::Int) => Some((ir::UnOpCode::IntMinus, Type::Int)),
         (Minus, &Type::Double) => Some((ir::UnOpCode::DoubleMinus, Type::Double)),
         (LogicalNot, &Type::Bool) => Some((ir::UnOpCode::BoolLogicalNot, Type::Bool)),
-        (AddressOf, &Type::LValue(ref ty)) => Some((ir::UnOpCode::AddressOf, Type::Ptr(ty.clone()))),
+        (AddressOf, &Type::LValue(ref ty)) => {
+            Some((ir::UnOpCode::AddressOf, Type::Ptr(ty.clone())))
+        }
         (Deref, &Type::Ptr(ref sub)) => Some((ir::UnOpCode::PtrDeref, Type::LValue(sub.clone()))),
         _ => None,
     }
@@ -71,6 +73,6 @@ pub fn cast_tyck(expr_ty: &ir::Type, target_ty: &ir::Type) -> Option<ir::CastCod
         (&Type::Char, &Type::Int) => Some(ir::CastCode::CharToInt),
         (&Type::Int, &Type::Bool) => Some(ir::CastCode::IntToBool),
         (&Type::Bool, &Type::Int) => Some(ir::CastCode::BoolToInt),
-        _ => None
+        _ => None,
     }
 }

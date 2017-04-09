@@ -257,12 +257,42 @@ impl<'a> FunctionGenerator<'a> {
             ir::Expression::CastOp(op, expr) => {
                 use ir::CastCode::*;
                 match op {
-                    IntToDouble => write!(self.writer, "sitofp {} %temp_{} to double", type_to_string(expr.ty), expr.id),
-                    DoubleToInt => write!(self.writer, "fptosi {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
-                    IntToChar => write!(self.writer, "trunc {} %temp_{} to i8", type_to_string(expr.ty), expr.id),
-                    CharToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
-                    IntToBool => write!(self.writer, "icmp ne {} %temp_{}, 0", type_to_string(expr.ty), expr.id),
-                    BoolToInt => write!(self.writer, "zext {} %temp_{} to i32", type_to_string(expr.ty), expr.id),
+                    IntToDouble => {
+                        write!(self.writer,
+                               "sitofp {} %temp_{} to double",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
+                    DoubleToInt => {
+                        write!(self.writer,
+                               "fptosi {} %temp_{} to i32",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
+                    IntToChar => {
+                        write!(self.writer,
+                               "trunc {} %temp_{} to i8",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
+                    CharToInt => {
+                        write!(self.writer,
+                               "zext {} %temp_{} to i32",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
+                    IntToBool => {
+                        write!(self.writer,
+                               "icmp ne {} %temp_{}, 0",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
+                    BoolToInt => {
+                        write!(self.writer,
+                               "zext {} %temp_{} to i32",
+                               type_to_string(expr.ty),
+                               expr.id)
+                    }
                 }
             }
             ir::Expression::FuncCall(func, params) => {
@@ -270,26 +300,29 @@ impl<'a> FunctionGenerator<'a> {
                        "call {} %temp_{}({})",
                        type_to_string(func.ty),
                        func.id,
-                       params.into_iter()
-                             .map(|val| format!("{} %temp_{}", type_to_string(val.ty), val.id))
-                             .join(", "))
+                       params
+                           .into_iter()
+                           .map(|val| format!("{} %temp_{}", type_to_string(val.ty), val.id))
+                           .join(", "))
             }
             ir::Expression::Literal(lit) => {
                 match lit {
                     ir::Literal::Int(val) => {
                         write!(self.writer, "select i1 true, i32 {}, i32 0", val)
-                    },
+                    }
                     ir::Literal::Double(val) => {
-                        write!(self.writer, "select i1 true, double {:.10}, double 0.0", val)
-                    },
+                        write!(self.writer,
+                               "select i1 true, double {:.10}, double 0.0",
+                               val)
+                    }
                     ir::Literal::Bool(val) => {
                         write!(self.writer,
                                "select i1 true, i1 {}, i1 0",
                                if val { 1 } else { 0 })
-                    },
+                    }
                     ir::Literal::Char(val) => {
                         write!(self.writer, "select i1 true, i8 {}, i8 0", val)
-                    },
+                    }
                     ir::Literal::Unit => Ok(()),
 
                 }

@@ -39,7 +39,10 @@ impl ASTPrinter {
                 ref variadic,
                 ref return_ty,
             } => {
-                println!("ExternFunctionDecl '{}' '{}' var:{:?}", name, return_ty.inner, variadic);
+                println!("ExternFunctionDecl '{}' '{}' var:{:?}",
+                         name,
+                         return_ty.inner,
+                         variadic);
                 self.0 += 1;
                 for param in params {
                     self.print_tab();
@@ -114,7 +117,13 @@ impl ASTPrinter {
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
             }
-            For { ref name, ref init_expr, ref cond_expr, ref step_expr, ref stmt } => {
+            For {
+                ref name,
+                ref init_expr,
+                ref cond_expr,
+                ref step_expr,
+                ref stmt,
+            } => {
                 println!("ForStmt '{}'", name);
                 self.0 += 1;
                 self.print_expression(init_expr);

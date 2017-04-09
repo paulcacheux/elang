@@ -53,7 +53,8 @@ fn main() {
 
     let tu = pipeline::process_main_path(input_path, &options);
 
-    let mut output_writer: Box<std::io::Write> = if let Some(output_path) = matches.value_of("OUTPUT") {
+    let mut output_writer: Box<std::io::Write> = if let Some(output_path) =
+        matches.value_of("OUTPUT") {
         Box::new(std::fs::File::create(output_path).unwrap())
     } else {
         Box::new(std::io::stdout())
@@ -62,11 +63,11 @@ fn main() {
     match matches.value_of("output_type").unwrap_or("none") {
         "c" => {
             codegen::c_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
-        },
+        }
         "llvm" => {
             codegen::llvm_gen::gen_translation_unit(&mut output_writer, tu).expect("error gen");
-        },
+        }
         "none" => {}
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }

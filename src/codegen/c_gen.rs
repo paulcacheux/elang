@@ -179,7 +179,7 @@ fn gen_terminator<F: Write>(f: &mut F, term: ir::Terminator) -> io::Result<()> {
             } else {
                 writeln!(f, "\treturn;")
             }
-        },
+        }
     }
 }
 
