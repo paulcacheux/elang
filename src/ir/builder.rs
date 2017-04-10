@@ -460,6 +460,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let logical_result = fb.register_local_logical();
                 let lhs_value = build_expression(fb, *lhs)?;
                 let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+                let lhs_ty = lhs_value.ty.clone();
 
                 let true_label = fb.new_label();
                 let false_label = fb.new_label();
@@ -472,6 +473,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+                let rhs_ty = rhs_value.ty.clone();
                 let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
 
                 fb.push_statement(ir::Statement::Assign(
@@ -506,11 +508,19 @@ fn build_expression(fb: &mut FunctionBuilder,
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
                                                         ir::Expression::LValueLoad(return_lvalue)));
 
+                if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_ty, rhs_ty),
+                        span: expr.span,
+                    })
+                }
+
                 Ok(return_value)
             } else if code == ast::BinOpCode::LogicalOr {
                 let logical_result = fb.register_local_logical();
                 let lhs_value = build_expression(fb, *lhs)?;
                 let lhs_value = build_lvalue_to_rvalue(fb, lhs_value);
+                let lhs_ty = lhs_value.ty.clone();
 
                 let true_label = fb.new_label();
                 let false_label = fb.new_label();
@@ -538,6 +548,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
+                let rhs_ty = rhs_value.ty.clone();
                 let final_value_rhs = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
 
                 fb.push_statement(ir::Statement::Assign(
@@ -556,6 +567,13 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let return_value = fb.new_temp_value(ir::Type::Bool);
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
                                                         ir::Expression::LValueLoad(return_lvalue)));
+
+                if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
+                    return Err(SyntaxError {
+                        msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_ty, rhs_ty),
+                        span: expr.span,
+                    })
+                }
 
                 Ok(return_value)
             } else {
