@@ -1,4 +1,5 @@
 use ast::*;
+use span::{Spanned, Span};
 
 pub fn print_ast(tu: &TranslationUnit) {
     println!("Translation Unit");

@@ -7,12 +7,13 @@ use clap::{Arg, App};
 use std::path::PathBuf;
 
 mod pipeline;
-mod ast;
-mod parser;
+mod span;
 mod lexer;
-mod diagnostics;
+mod parser;
+mod ast;
 mod ir;
 mod codegen;
+mod diagnostics;
 mod outer;
 
 use pipeline::{CompileOptions, OutputType};

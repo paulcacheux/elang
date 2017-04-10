@@ -2,7 +2,8 @@ use std::path::Path;
 
 use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
-use ast::Span;
+
+use span::Span;
 use ir::builder::SyntaxError;
 
 pub struct Error<'a> {

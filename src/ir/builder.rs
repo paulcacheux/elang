@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use ir;
 use ast;
-use ast::{Span, Spanned};
+use span::{Spanned, Span};
 use ir::tyck;
 use pipeline;
 
