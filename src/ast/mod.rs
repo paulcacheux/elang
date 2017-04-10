@@ -109,6 +109,42 @@ pub enum UnOpCode {
     Deref,
 }
 
+impl fmt::Display for BinOpCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BinOpCode::*;
+        let op = match *self {
+            Add => "+",
+            Sub => "-",
+            Times => "*",
+            Divide => "/",
+            Mod => "%",
+            Less => "<",
+            LessEqual => "<=",
+            Greater => ">",
+            GreaterEqual => ">=",
+            Equal => "==",
+            NotEqual => "!=",
+            LogicalAnd => "&&",
+            LogicalOr => "||",
+        };
+        write!(f, "{}", op)
+    }
+}
+
+impl fmt::Display for UnOpCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::UnOpCode::*;
+        let op = match *self {
+            Minus => "-",
+            LogicalNot => "!",
+            AddressOf => "&",
+            Deref => "*",
+        };
+        write!(f, "{}", op)
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Spanned<T> {
     pub inner: T,

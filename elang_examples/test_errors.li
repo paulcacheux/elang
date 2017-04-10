@@ -1,7 +1,9 @@
+import io;
+
+extern fn lol(int, double, bool, char);
+
 fn main() -> int {
-    let x = 0;
-    while x != 0 {
-        return 12; #test comment
-    }
+    lol(1, true, 'a' + 'a');
+
     return 13;
 }

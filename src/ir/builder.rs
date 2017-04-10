@@ -215,7 +215,11 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!("Mismatching assignment types."),
+                        msg: format!(
+                            "Mismatching assignment types. Expected '{}', found '{}'.",
+                            ty,
+                            expr_value.ty
+                        ),
                         span: stmt.span,
                     })
             }
@@ -243,7 +247,7 @@ fn build_statement(fb: &mut FunctionBuilder,
 
             if cond_value.ty != ir::Type::Bool {
                 return Err(SyntaxError {
-                               msg: format!("Condition type must be bool."),
+                               msg: format!("Condition type must be bool. Found '{}'.", cond_value.ty),
                                span: error_span,
                            });
             }
@@ -310,7 +314,7 @@ fn build_statement(fb: &mut FunctionBuilder,
 
                 if cond_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                                   msg: format!("Condition type must be bool."),
+                                   msg: format!("Condition type must be bool. Found '{}'.", cond_value.ty),
                                    span: error_span,
                                });
                 }
@@ -375,7 +379,7 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!("Mismatching return type."),
+                        msg: format!("Mismatching return type. Expected '{}', found '{}'", fb.ty.return_ty, value.ty),
                         span: error_span,
                     })
             }
@@ -393,6 +397,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                     -> Result<ir::Value, SyntaxError> {
     match expr.inner {
         ast::Expression::Assign(lhs, rhs) => {
+            let lhs_span = lhs.span;
             let lhs_value = build_expression(fb, *lhs)?;
             let rhs_value = build_expression(fb, *rhs)?;
             let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
@@ -403,18 +408,21 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(rhs_value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("Mismatching type in assignment."),
+                            msg: format!("Mismatching type in assignment. Expected '{}', found '{}'", sub, rhs_value.ty),
                             span: expr.span,
                         })
                 }
             } else {
                 Err(SyntaxError {
-                        msg: format!("Can't assign to a non-lvalue."),
-                        span: expr.span,
+                        msg: format!("Value not assignable."),
+                        span: lhs_span,
                     })
             }
         }
         ast::Expression::Subscript(array, index) => {
+            let array_span = array.span;
+            let index_span = index.span;
+
             let array_value = build_expression(fb, *array)?;
             let array_value = build_lvalue_to_rvalue(fb, array_value);
             let index_value = build_expression(fb, *index)?;
@@ -435,14 +443,14 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("Index must be of int type."),
-                            span: expr.span,
+                            msg: format!("Index must be of int type. Found '{}'.", index_value.ty),
+                            span: index_span,
                         })
                 }
             } else {
                 Err(SyntaxError {
-                        msg: format!("Subscript to a non-ptr."),
-                        span: expr.span,
+                        msg: format!("Subscript to a non-ptr. Found '{}'.", array_value.ty),
+                        span: array_span,
                     })
             }
 
@@ -566,7 +574,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("Operation mismatching for those types."),
+                            msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_value.ty, rhs_value.ty),
                             span: expr.span,
                         })
                 }
@@ -585,7 +593,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("Operation mismatching for those types."),
+                        msg: format!("'{}' is not defined for '{}'", code, sub_value.ty),
                         span: expr.span,
                     })
             }
@@ -595,9 +603,11 @@ fn build_expression(fb: &mut FunctionBuilder,
             let func_value = build_lvalue_to_rvalue(fb, func_value);
 
             if let ir::Type::Function(func_ty) = func_value.ty.clone() {
-                let mut param_ty = Vec::new();
-                let mut param_values = Vec::new();
+                let mut param_spans = Vec::with_capacity(params.len());
+                let mut param_ty = Vec::with_capacity(params.len());
+                let mut param_values = Vec::with_capacity(params.len());
                 for param in params {
+                    param_spans.push(param.span);
                     let param = build_expression(fb, param)?;
                     let param = build_lvalue_to_rvalue(fb, param);
 
@@ -609,17 +619,23 @@ fn build_expression(fb: &mut FunctionBuilder,
                 if (func_ty.variadic && param_ty.len() < func_ty.params_ty.len()) ||
                    (!func_ty.variadic && param_ty.len() != func_ty.params_ty.len()) {
                     return Err(SyntaxError {
-                                   msg: format!("Mismatching params len."),
+                                   msg: format!("Mismatching params len. Expected {}, found {}.", func_ty.params_ty.len(), param_ty.len()),
                                    span: expr.span,
                                });
                 }
 
-                for (ty1, ty2) in param_ty.iter().zip(func_ty.params_ty.iter()) {
-                    if ty1 != ty2 {
-                        return Err(SyntaxError {
-                                       msg: format!("Mismatching param type."),
-                                       span: expr.span,
-                                   });
+                for i in 0..func_ty.params_ty.len() {
+                    if param_ty[i] != func_ty.params_ty[i] {
+                        return Err(
+                            SyntaxError {
+                                msg: format!(
+                                    "Mismatching parameter type. Expected '{}', found '{}'.",
+                                    func_ty.params_ty[i],
+                                    param_ty[i]
+                                ),
+                                span: param_spans[i],
+                            }
+                        );
                     }
                 }
 
@@ -630,7 +646,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("Not callable."),
+                        msg: format!("'{}' type is not callable.", func_value.ty),
                         span: expr.span,
                     })
             }
@@ -648,7 +664,11 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("Unknown cast."),
+                        msg: format!(
+                            "A cast between '{}' and '{}' is not defined.",
+                            expr_value.ty,
+                            target_ty
+                        ),
                         span: expr.span,
                     })
             }
@@ -744,9 +764,13 @@ fn build_expression(fb: &mut FunctionBuilder,
             let expr_ty = values.first().unwrap().ty.clone();
 
             for i in 1..values.len() {
-                if values[i].ty != values[1].ty {
+                if values[i].ty != values[0].ty {
                     return Err(SyntaxError {
-                                   msg: format!("Msimatching type."),
+                                   msg: format!(
+                                       "Mismatching type. Expected '{}', found '{}'",
+                                       values[0].ty,
+                                       values[i].ty
+                                   ),
                                    span: spans[i],
                                });
                 }
@@ -909,7 +933,7 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "char" => Ok(ir::Type::Char),
                 other => {
                     Err(SyntaxError {
-                            msg: format!("Unrecognized type '{}'.", other),
+                            msg: format!("Undefined type '{}'.", other),
                             span: parse_ty.span,
                         })
                 }
@@ -1028,7 +1052,7 @@ impl<'a> FunctionBuilder<'a> {
 
         if panic_preds.contains(&ir::BasicBlockId(0)) {
             return Err(SyntaxError {
-                           msg: format!("Not all paths return."),
+                           msg: format!("There are paths in this functions that may not return."),
                            span: span,
                        });
         } else {
