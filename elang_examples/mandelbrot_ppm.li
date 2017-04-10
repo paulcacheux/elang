@@ -1,5 +1,4 @@
-extern fn print_char(char);
-extern fn print_int(int);
+import io;
 
 fn color(red: int, green: int, blue: int) {
     print_char(red as char);
@@ -24,18 +23,15 @@ fn main() -> int {
     print_int(255);
     print_char('\n');
 
-    let hy = 1;
-    while hy <= hyres {
-        let hx = 1;
-        while hx <= hxres {
+    for hy = 1; hy <= hyres; hy = hy + 1 {
+        for hx = 1; hx <= hxres; hx = hx + 1 {
             let cx = ((hx as double) / (hxres as double) - 0.5) / magnify * 3.0 - 0.7;
             let cy = ((hy as double) / (hyres as double) - 0.5) / magnify * 3.0;
             let x = 0.0;
             let y = 0.0;
 
             let it2 = itermax + 1;
-            let iteration = 1;
-            while iteration <= itermax {
+            for iteration = 1; iteration <= itermax; iteration = iteration + 1 {
                 let x_new = x * x - y * y + cx;
                 let y_new = 2.0 * x * y + cy;
 
@@ -46,17 +42,14 @@ fn main() -> int {
                     it2 = iteration;
                     break;
                 }
-
-                iteration = iteration + 1;
             }
+
             if it2 < itermax {
                 color(200 + (55 * it2) / 100, (230 * (100 - it2)) / 100, (230 * (100 - it2)) / 100 );
             } else {
                 color(0, 255, 255);
             }
-            hx = hx + 1;
         }
-        hy = hy + 1;
     }
 
     return 0;
