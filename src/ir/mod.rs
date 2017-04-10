@@ -4,7 +4,7 @@ use itertools::Itertools;
 pub mod builder;
 pub mod printer;
 pub mod opt;
-mod tyck;
+pub mod symbol_table;
 
 #[derive(Debug, Clone)]
 pub struct TranslationUnit {

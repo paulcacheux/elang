@@ -1,64 +1,18 @@
 use std::collections::{HashMap, HashSet};
+
 use ir;
 use ast;
 use span::{Spanned, Span};
-use ir::tyck;
 use pipeline;
+
+use ir::symbol_table::SymbolTable;
+
+mod typecheck_defs;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {
     pub msg: String,
     pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct SymbolTable {
-    globals: HashMap<String, ir::Type>,
-    locals: Vec<HashMap<String, (ir::LocalVarId, ir::Type)>>,
-}
-
-impl SymbolTable {
-    pub fn new() -> Self {
-        SymbolTable {
-            globals: HashMap::new(),
-            locals: Vec::new(),
-        }
-    }
-
-    fn start_local_scope(&mut self) {
-        self.locals.push(HashMap::new());
-    }
-
-    fn end_local_scope(&mut self) {
-        self.locals.pop();
-    }
-
-    fn register_local(&mut self, name: String, ty: ir::Type, id: ir::LocalVarId) -> bool {
-        // return false if already on scope
-        self.locals
-            .last_mut()
-            .unwrap()
-            .insert(name, (id, ty))
-            .is_none()
-    }
-
-    fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
-        self.globals.insert(name, ty).is_none()
-    }
-
-    fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
-        for scope in self.locals.iter().rev() {
-            if let Some(&(ref id, ref ty)) = scope.get(name) {
-                return Some((ir::Type::LValue(Box::new(ty.clone())),
-                             ir::Expression::LocalVarLoad(id.clone())));
-            }
-        }
-        if let Some(ty) = self.globals.get(name) {
-            Some((ty.clone(), ir::Expression::GlobalLoad(name.clone())))
-        } else {
-            None
-        }
-    }
 }
 
 pub fn build_translation_unit(tu: ast::TranslationUnit,
@@ -582,7 +536,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
 
-                if let Some((op, ty)) = tyck::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
+                if let Some((op, ty)) = typecheck_defs::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
                     let value = fb.new_temp_value(ty);
 
                     fb.push_statement(ir::Statement::Assign(value.clone(),
@@ -604,7 +558,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 sub_value = build_lvalue_to_rvalue(fb, sub_value);
             }
 
-            if let Some((op, ty)) = tyck::unop_tyck(code, &sub_value.ty) {
+            if let Some((op, ty)) = typecheck_defs::unop_tyck(code, &sub_value.ty) {
                 let value = fb.new_temp_value(ty);
                 fb.push_statement(ir::Statement::Assign(value.clone(),
                                                         ir::Expression::UnOp(op, sub_value)));
@@ -674,7 +628,7 @@ fn build_expression(fb: &mut FunctionBuilder,
             let expr_value = build_lvalue_to_rvalue(fb, expr_value);
             let target_ty = build_type(target_ty)?;
 
-            if let Some(code) = tyck::cast_tyck(&expr_value.ty, &target_ty) {
+            if let Some(code) = typecheck_defs::cast_tyck(&expr_value.ty, &target_ty) {
                 let value = fb.new_temp_value(target_ty);
                 fb.push_statement(ir::Statement::Assign(value.clone(),
                                                         ir::Expression::CastOp(code, expr_value)));
