@@ -605,7 +605,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                     param_values.push(param);
                 }
 
-                if param_ty.len() < func_ty.params_ty.len() {
+
+                if (func_ty.variadic && param_ty.len() < func_ty.params_ty.len()) ||
+                   (!func_ty.variadic && param_ty.len() != func_ty.params_ty.len()) {
                     return Err(SyntaxError {
                                    msg: format!("Mismatching params len."),
                                    span: expr.span,

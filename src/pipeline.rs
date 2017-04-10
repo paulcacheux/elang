@@ -76,12 +76,12 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     options: &CompileOptions,
                                     symbol_table: &mut SymbolTable)
                                     -> ir::TranslationUnit {
-    let input = read_file(input_path).expect("Can't read input file");
+    let input = read_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let ast_tu = match parser::parse_TranslationUnit(lex) {
         Ok(ast_tu) => ast_tu,
         Err(err) => {
-            diagnostics::print_diagnostic(&input, err);
+            diagnostics::print_diagnostic(&input, input_path, err);
             exit(1);
         }
     };
@@ -93,7 +93,7 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
     match ir::builder::build_translation_unit(ast_tu, symbol_table, options) {
         Ok(tu) => tu,
         Err(err) => {
-            diagnostics::print_diagnostic(&input, err);
+            diagnostics::print_diagnostic(&input, input_path, err);
             exit(1);
         }
     }

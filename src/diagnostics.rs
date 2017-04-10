@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
 use ast::Span;
@@ -23,14 +25,14 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
         match self {
             ParseError::InvalidToken { location } => {
                 Error {
-                    msg: format!("Invalid token."),
+                    msg: format!("Invalid token.\n"),
                     lines: get_lines(input, Span(location, location + 1)),
                 }
             }
             ParseError::UnrecognizedToken { token, expected } => {
                 let mut error = if let Some((start, tok, end)) = token {
                     Error {
-                        msg: format!("Unrecognized token: {:?}.", tok),
+                        msg: format!("Unrecognized token: {:?}.\n", tok),
                         lines: get_lines(input, Span(start, end)),
                     }
                 } else {
@@ -71,8 +73,9 @@ impl<'a> ToError<'a> for SyntaxError {
     }
 }
 
-pub fn print_diagnostic<'a, E: ToError<'a>>(input: &'a str, error: E) {
+pub fn print_diagnostic<'a, E: ToError<'a>, P: AsRef<Path>>(input: &'a str, input_path: P, error: E) {
     let error = error.convert(input);
+    println!("Error in: {}", input_path.as_ref().display());
     println!("{}", error.msg);
     for line in error.lines {
         println!("{:<5}: {}", line.n + 1, line.text);
