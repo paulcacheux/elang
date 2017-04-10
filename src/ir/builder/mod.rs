@@ -350,21 +350,44 @@ fn build_expression(fb: &mut FunctionBuilder,
                     expr: Spanned<ast::Expression>)
                     -> Result<ir::Value, SyntaxError> {
     match expr.inner {
-        ast::Expression::Assign(lhs, rhs) => {
+        ast::Expression::Assign(op, lhs, rhs) => {
             let lhs_span = lhs.span;
             let lhs_value = build_expression(fb, *lhs)?;
             let rhs_value = build_expression(fb, *rhs)?;
             let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
 
             if let ir::Type::LValue(sub) = lhs_value.ty.clone() {
-                if *sub == rhs_value.ty.clone() {
-                    fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
-                    Ok(rhs_value)
-                } else {
-                    Err(SyntaxError {
-                            msg: format!("Mismatching type in assignment. Expected '{}', found '{}'", sub, rhs_value.ty),
+
+                if let Some(binop) = op {
+                    let lhs_real_value = build_lvalue_to_rvalue(fb, lhs_value.clone());
+
+                    if let Some((irop, ty)) = typecheck_defs::binop_tyck(binop, &lhs_real_value.ty, &rhs_value.ty) {
+                        let value = fb.new_temp_value(ty);
+                        fb.push_statement(ir::Statement::Assign(
+                            value.clone(),
+                            ir::Expression::BinOp(irop, lhs_real_value, rhs_value)
+                        ));
+                        fb.push_statement(ir::Statement::LValueSet(
+                            lhs_value,
+                            value.clone()
+                        ));
+                        Ok(value)
+                    } else {
+                        Err(SyntaxError {
+                            msg: format!("'{}' is not defined between '{}' and '{}'.", binop, lhs_real_value.ty, rhs_value.ty),
                             span: expr.span,
                         })
+                    }
+                } else {
+                    if *sub == rhs_value.ty.clone() {
+                        fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
+                        Ok(rhs_value)
+                    } else {
+                        Err(SyntaxError {
+                                msg: format!("Mismatching type in assignment. Expected '{}', found '{}'", sub, rhs_value.ty),
+                                span: expr.span,
+                            })
+                    }
                 }
             } else {
                 Err(SyntaxError {

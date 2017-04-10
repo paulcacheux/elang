@@ -131,9 +131,9 @@ ExprStmt: Statement = {
 Expr = AssignExpr;
 
 AssignExpr: Spanned<Expression> = {
-    <l:@L> <lhs:LogOrExpr> "=" <rhs:AssignExpr> <r:@R> => {
+    <l:@L> <lhs:LogOrExpr> <op:AssignOp> <rhs:AssignExpr> <r:@R> => {
         Spanned::new(
-            Expression::Assign(Box::new(lhs), Box::new(rhs)),
+            Expression::Assign(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
@@ -165,6 +165,15 @@ CompExpr: Spanned<Expression> = {
 
 SumExpr = Tier<SumOp, FactorExpr>;
 FactorExpr = Tier<FactorOp, CastExpr>;
+
+AssignOp: Option<BinOpCode> = {
+    "=" => None,
+    "+=" => Some(BinOpCode::Add),
+    "-=" => Some(BinOpCode::Sub),
+    "*=" => Some(BinOpCode::Times),
+    "/=" => Some(BinOpCode::Divide),
+    "%=" => Some(BinOpCode::Mod),
+};
 
 LogicalOrOp: BinOpCode = {
     "||" => BinOpCode::LogicalOr
@@ -317,6 +326,11 @@ extern {
         "*" => lexer::Token::Star,
         "/" => lexer::Token::Slash,
         "%" => lexer::Token::Modulo,
+        "+=" => lexer::Token::PlusEqual,
+        "-=" => lexer::Token::MinusEqual,
+        "*=" => lexer::Token::StarEqual,
+        "/=" => lexer::Token::SlashEqual,
+        "%=" => lexer::Token::ModuloEqual,
         "!" => lexer::Token::Bang,
         "<" => lexer::Token::Less,
         "<=" => lexer::Token::LessEqual,

@@ -7,31 +7,27 @@ fn color(red: int, green: int, blue: int) {
 }
 
 fn main() -> int {
-    let hxres = 500;
-    let hyres = 500;
+    let hxres = 10000;
+    let hyres = 10000;
     let itermax = 100;
     let magnify = 1.0;
 
     #header
-    print_char('P');
-    print_char('6');
-    print_char('\n');
+    print_string("P6\n");
     print_int(hxres);
     print_char(' ');
-    print_int(hyres);
-    print_char('\n');
-    print_int(255);
-    print_char('\n');
+    println_int(hyres);
+    println_int(255);
 
-    for hy = 1; hy <= hyres; hy = hy + 1 {
-        for hx = 1; hx <= hxres; hx = hx + 1 {
+    for hy = 1; hy <= hyres; hy += 1 {
+        for hx = 1; hx <= hxres; hx += 1 {
             let cx = ((hx as double) / (hxres as double) - 0.5) / magnify * 3.0 - 0.7;
             let cy = ((hy as double) / (hyres as double) - 0.5) / magnify * 3.0;
             let x = 0.0;
             let y = 0.0;
 
             let it2 = itermax + 1;
-            for iteration = 1; iteration <= itermax; iteration = iteration + 1 {
+            for iteration = 1; iteration <= itermax; iteration += 1 {
                 let x_new = x * x - y * y + cx;
                 let y_new = 2.0 * x * y + cy;
 

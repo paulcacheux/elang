@@ -36,6 +36,11 @@ pub enum Token {
     Star,
     Slash,
     Modulo,
+    PlusEqual,
+    MinusEqual,
+    StarEqual,
+    SlashEqual,
+    ModuloEqual,
     Bang,
     Less,
     LessEqual,
@@ -111,19 +116,46 @@ impl<'input> Iterator for Lexer<'input> {
             Some((i, ';')) => Some(Ok((i, Token::SemiColon, i + 1))),
             Some((i, ':')) => Some(Ok((i, Token::Colon, i + 1))),
 
-            Some((i, '+')) => Some(Ok((i, Token::Plus, i + 1))),
-            Some((i, '*')) => Some(Ok((i, Token::Star, i + 1))),
-            Some((i, '/')) => Some(Ok((i, Token::Slash, i + 1))),
-            Some((i, '%')) => Some(Ok((i, Token::Modulo, i + 1))),
 
-            Some((i, '.')) => {
-                Some(Ok(match self.if_next('.', Token::DotDot, Token::Dot) {
+            Some((i, '+')) => {
+                Some(Ok(match self.if_next('=', Token::PlusEqual, Token::Plus) {
+                            Ok(tok) => (i, tok, i + 2),
+                            Err(tok) => (i, tok, i + 1),
+                        }))
+            }
+            Some((i, '*')) => {
+                Some(Ok(match self.if_next('=', Token::StarEqual, Token::Star) {
+                            Ok(tok) => (i, tok, i + 2),
+                            Err(tok) => (i, tok, i + 1),
+                        }))
+            }
+            Some((i, '/')) => {
+                Some(Ok(match self.if_next('=', Token::SlashEqual, Token::Slash) {
+                            Ok(tok) => (i, tok, i + 2),
+                            Err(tok) => (i, tok, i + 1),
+                        }))
+            }
+            Some((i, '%')) => {
+                Some(Ok(match self.if_next('=', Token::ModuloEqual, Token::Modulo) {
                             Ok(tok) => (i, tok, i + 2),
                             Err(tok) => (i, tok, i + 1),
                         }))
             }
             Some((i, '-')) => {
-                Some(Ok(match self.if_next('>', Token::Arrow, Token::Minus) {
+                match self.chars.peek() {
+                    Some(&(_, '=')) => {
+                        self.chars.next();
+                        Some(Ok((i, Token::MinusEqual, i + 2)))
+                    }
+                    Some(&(_, '>')) => {
+                        self.chars.next();
+                        Some(Ok((i, Token::Arrow, i + 2)))
+                    }
+                    _ => Some(Ok((i, Token::Minus, i + 1)))
+                }
+            }
+            Some((i, '.')) => {
+                Some(Ok(match self.if_next('.', Token::DotDot, Token::Dot) {
                             Ok(tok) => (i, tok, i + 2),
                             Err(tok) => (i, tok, i + 1),
                         }))
