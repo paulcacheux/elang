@@ -9,27 +9,27 @@ use pipeline::{CompileOptions, OutputType};
 use ir;
 use codegen;
 
-fn get_writer(output_path: &Option<PathBuf>) -> Box<std::io::Write>{
+fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>>{
     if let Some(ref output_path) = *output_path {
-        Box::new(std::fs::File::create(output_path).unwrap())
+        Ok(Box::new(std::fs::File::create(output_path)?))
     } else {
-        Box::new(std::io::stdout())
+        Ok(Box::new(std::io::stdout()))
     }
 }
 
-pub fn main_outer(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) {
+pub fn main_outer(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) -> io::Result<()> {
     match options.output_type {
-        OutputType::None => {}
+        OutputType::None => Ok(()),
         OutputType::C => {
-            let mut writer = get_writer(&options.output_path);
-            codegen::c_gen::gen_translation_unit(&mut writer, tu).expect("error gen");
+            let mut writer = get_writer(&options.output_path)?;
+            codegen::c_gen::gen_translation_unit(&mut writer, tu)
         }
         OutputType::LLVM => {
-            let mut writer = get_writer(&options.output_path);
-            codegen::llvm_gen::gen_translation_unit(&mut writer, tu).expect("error gen");
+            let mut writer = get_writer(&options.output_path)?;
+            codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
         }
         OutputType::Run => {
-            run_with_llvm(tu, input_path, options).expect("IO Error");
+            run_with_llvm(tu, input_path, options)
         }
     }
 }

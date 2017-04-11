@@ -59,5 +59,8 @@ fn main() {
     };
 
     let tu = pipeline::process_main_path(input_path.clone(), &options);
-    outer::main_outer(tu, input_path.to_str().unwrap(), &options);
+    if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
+        println!("{}", err);
+        std::process::exit(1);
+    }
 }
