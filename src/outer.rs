@@ -46,32 +46,33 @@ fn executable_name(path: &str) -> String {
     name_parts.join(".")
 }
 
-fn run_with_llvm(tu: ir::TranslationUnit, input_path: &str, _: &CompileOptions) -> io::Result<()> {
+fn run_with_llvm(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) -> io::Result<()> {
     let exec_name = executable_name(input_path);
 
     let tmp_dir = TempDir::new("elang-compiler")?;
     let llvm_path = tmp_dir.path().join(format!("{}.ll", exec_name));
-    let llvm_opt_path = tmp_dir.path().join(format!("{}.opt.ll", exec_name));
     let obj_path = tmp_dir.path().join(format!("{}.o", exec_name));
     let exec_path = tmp_dir.path().join(exec_name);
 
     let mut llvm_file = File::create(&llvm_path)?;
     codegen::llvm_gen::gen_translation_unit(&mut llvm_file, tu).expect("error llvm gen");
 
-    if !std::process::Command::new("opt")
-        .arg("-O3")
-        .arg("-S")
-        .arg(llvm_path.to_str().unwrap())
-        .arg("-o").arg(llvm_opt_path.to_str().unwrap())
-        .spawn()?
-        .wait()?
-        .success() {
-        panic!("opt fail");
+    if options.opt {
+        if !std::process::Command::new("opt")
+            .arg("-O3")
+            .arg("-S")
+            .arg(llvm_path.to_str().unwrap())
+            .arg("-o").arg(llvm_path.to_str().unwrap())
+            .spawn()?
+            .wait()?
+            .success() {
+            panic!("opt fail");
+        }
     }
 
     if !std::process::Command::new("llc")
         .arg("-filetype=obj")
-        .arg(llvm_opt_path.to_str().unwrap())
+        .arg(llvm_path.to_str().unwrap())
         .arg("-o").arg(obj_path.to_str().unwrap())
         .spawn()?
         .wait()?
