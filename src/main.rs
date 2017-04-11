@@ -2,6 +2,7 @@ extern crate clap;
 extern crate itertools;
 extern crate unicode_xid;
 extern crate lalrpop_util;
+extern crate tempdir;
 
 use clap::{Arg, App};
 use std::path::PathBuf;
@@ -57,6 +58,6 @@ fn main() {
         output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 
-    let tu = pipeline::process_main_path(input_path, &options);
-    outer::main_outer(tu, &options);
+    let tu = pipeline::process_main_path(input_path.clone(), &options);
+    outer::main_outer(tu, input_path.to_str().unwrap(), &options);
 }
