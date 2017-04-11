@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 use ir;
 use ast;
 use span::{Spanned, Span};
@@ -8,6 +6,8 @@ use pipeline;
 use ir::symbol_table::SymbolTable;
 
 mod typecheck_defs;
+mod function_builder;
+use self::function_builder::FunctionBuilder;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {
@@ -123,7 +123,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             function_builder.symbol_table.end_local_scope();
 
-            function_builder.to_function(decl.span)
+            function_builder.into_function(decl.span)
         }
     }
 }
@@ -934,217 +934,5 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 }
             }
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum Item {
-    Statement(ir::Statement),
-    TerminatorAndLabel(Option<ir::Terminator>, ir::BasicBlockId), // None if fallthrough
-}
-
-#[derive(Debug)]
-struct FunctionBuilder<'a> {
-    name: String,
-    ty: ir::FunctionType,
-    symbol_table: &'a mut SymbolTable,
-    locals: Vec<ir::LocalVar>,
-    items: Vec<Item>,
-    local_counter: usize,
-    label_counter: usize,
-    current_temp_id: usize,
-    current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)>, // (continue, break)
-}
-
-impl<'a> FunctionBuilder<'a> {
-    fn new(name: String, ty: ir::FunctionType, st: &'a mut SymbolTable) -> Self {
-        FunctionBuilder {
-            name: name,
-            ty: ty,
-            symbol_table: st,
-            locals: Vec::new(),
-            items: Vec::new(),
-            local_counter: 0,
-            label_counter: 1,
-            current_temp_id: 0,
-            current_loop_info: None,
-        }
-    }
-
-    fn to_function(self, span: Span) -> Result<ir::Declaration, SyntaxError> {
-        #[derive(Clone)]
-        enum PanicTerminator {
-            Real(ir::Terminator),
-            Panic,
-        }
-
-        struct TempBasicBlock {
-            id: ir::BasicBlockId,
-            stmts: Vec<ir::Statement>,
-            terminator: PanicTerminator,
-        }
-
-        let mut basic_blocks = Vec::new();
-        let mut current_id = ir::BasicBlockId(0);
-        let mut current_stmts = Vec::new();
-
-        for item in self.items {
-            match item {
-                Item::Statement(s) => current_stmts.push(s),
-                Item::TerminatorAndLabel(terminator, label) => {
-                    let terminator = if let Some(real_ter) = terminator.clone() {
-                        real_ter
-                    } else {
-                        ir::Terminator::Br(label)
-                    };
-                    basic_blocks.push(TempBasicBlock {
-                                          id: current_id,
-                                          stmts: current_stmts,
-                                          terminator: PanicTerminator::Real(terminator),
-                                      });
-                    current_id = label;
-                    current_stmts = Vec::new();
-                }
-            }
-        }
-
-        basic_blocks.push(TempBasicBlock {
-                              id: current_id,
-                              stmts: current_stmts,
-                              terminator: PanicTerminator::Panic,
-                          });
-
-        // remove check panic
-        let mut preds: HashMap<ir::BasicBlockId, HashSet<ir::BasicBlockId>> = HashMap::new();
-        for bb in basic_blocks.iter() {
-            if let PanicTerminator::Real(ref terminator) = bb.terminator {
-                match *terminator {
-                    ir::Terminator::Br(id) => {
-                        preds.entry(id).or_insert(HashSet::new()).insert(bb.id);
-                    }
-                    ir::Terminator::Ret(_) => {}
-                    ir::Terminator::BrCond(_, id1, id2) => {
-                        preds.entry(id1).or_insert(HashSet::new()).insert(bb.id);
-                        preds.entry(id2).or_insert(HashSet::new()).insert(bb.id);
-                    }
-                }
-            }
-        }
-
-        let mut opened = Vec::new();
-        opened.push(basic_blocks[basic_blocks.len() - 1].id);
-        let mut panic_preds = HashSet::<ir::BasicBlockId>::new();
-
-        while opened.len() != 0 {
-            let id = opened.pop().unwrap();
-            for pred in preds.get(&id).unwrap_or(&HashSet::new()) {
-                if !panic_preds.contains(pred) {
-                    opened.push(*pred);
-                }
-            }
-            panic_preds.insert(id);
-        }
-
-        if panic_preds.contains(&ir::BasicBlockId(0)) {
-            return Err(SyntaxError {
-                           msg: format!("There are paths in this functions that may not return."),
-                           span: span,
-                       });
-        } else {
-            basic_blocks.pop();
-        }
-
-        basic_blocks.retain(|bb| {
-                                preds.get(&bb.id).map(|s| s.len()).unwrap_or(0) != 0 || bb.id.0 == 0
-                            });
-
-        let real_bbs = basic_blocks
-            .into_iter()
-            .map(|bb| if let PanicTerminator::Real(term) = bb.terminator {
-                     ir::BasicBlock {
-                         id: bb.id,
-                         stmts: bb.stmts,
-                         terminator: term,
-                     }
-                 } else {
-                     unreachable!()
-                 })
-            .collect();
-
-        Ok(ir::Declaration::Function {
-               name: self.name,
-               ty: self.ty,
-               locals: self.locals,
-               bbs: real_bbs,
-           })
-    }
-
-    fn new_temp_value(&mut self, ty: ir::Type) -> ir::Value {
-        let id = self.current_temp_id;
-        self.current_temp_id += 1;
-        ir::Value { id: id, ty: ty }
-    }
-
-    fn new_label(&mut self) -> ir::BasicBlockId {
-        let id = ir::BasicBlockId(self.label_counter);
-        self.label_counter += 1;
-        id
-    }
-
-    fn push_terminator_label(&mut self, terminator: Option<ir::Terminator>, id: ir::BasicBlockId) {
-        self.items.push(Item::TerminatorAndLabel(terminator, id));
-    }
-
-    fn push_terminator(&mut self, terminator: Option<ir::Terminator>) {
-        let label = self.new_label();
-        self.push_terminator_label(terminator, label);
-    }
-
-    fn push_statement(&mut self, stmt: ir::Statement) {
-        self.items.push(Item::Statement(stmt));
-    }
-
-    fn register_param(&mut self, name: String, ty: ir::Type, param_index: Option<usize>) -> bool {
-        let res = self.symbol_table
-            .register_local(name, ty.clone(), ir::LocalVarId(self.local_counter));
-        self.locals
-            .push(ir::LocalVar {
-                      id: ir::LocalVarId(self.local_counter),
-                      ty: ty,
-                      size: 1,
-                      param_index: param_index,
-                  });
-        self.local_counter += 1;
-        res
-    }
-
-    fn register_local_variable(&mut self, name: String, ty: ir::Type) -> bool {
-        self.register_param(name, ty, None)
-    }
-
-    fn register_local_logical(&mut self) -> ir::LocalVarId {
-        let id = ir::LocalVarId(self.local_counter);
-        self.locals
-            .push(ir::LocalVar {
-                      id: id,
-                      ty: ir::Type::Bool,
-                      size: 1,
-                      param_index: None,
-                  });
-        self.local_counter += 1;
-        id
-    }
-
-    fn register_local_array(&mut self, ty: ir::Type, size: usize) -> ir::LocalVarId {
-        let id = ir::LocalVarId(self.local_counter);
-        self.locals
-            .push(ir::LocalVar {
-                      id: id,
-                      ty: ty,
-                      size: size,
-                      param_index: None,
-                  });
-        self.local_counter += 1;
-        id
     }
 }
