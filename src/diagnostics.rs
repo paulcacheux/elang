@@ -4,7 +4,7 @@ use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
 
 use span::Span;
-use ir::builder::SyntaxError;
+use syntax_error::SyntaxError;
 
 pub struct Error<'a> {
     msg: String,
@@ -68,7 +68,7 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
 impl<'a> ToError<'a> for SyntaxError {
     fn convert(self, input: &'a str) -> Error<'a> {
         Error {
-            msg: self.msg,
+            msg: self.kind.to_string(),
             lines: get_lines(input, self.span),
         }
     }

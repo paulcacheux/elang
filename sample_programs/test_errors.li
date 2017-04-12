@@ -3,7 +3,7 @@ import io;
 extern fn lol(int, double, bool, char);
 
 fn main() -> int {
-    lol(1, 1.0, true, '\n');
+    lol(1, 1.0, true, '\n', "lol");
 
     if false || 1 {
         print_string("wtf bro");

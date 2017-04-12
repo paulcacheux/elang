@@ -4,16 +4,11 @@ use span::{Spanned, Span};
 use pipeline;
 
 use ir::symbol_table::SymbolTable;
+use syntax_error::{SyntaxError, SyntaxErrorKind};
 
 mod typecheck_defs;
 mod function_builder;
 use self::function_builder::FunctionBuilder;
-
-#[derive(Debug, Clone)]
-pub struct SyntaxError {
-    pub msg: String,
-    pub span: Span,
-}
 
 pub fn build_translation_unit(tu: ast::TranslationUnit,
                               st: &mut SymbolTable,
@@ -60,7 +55,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
-                               msg: format!("'{}' function is already defined.", name),
+                               kind: SyntaxErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
                            });
             }
@@ -90,7 +85,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SyntaxError {
-                               msg: format!("'{}' function is already defined.", name),
+                               kind: SyntaxErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
                            });
             }
@@ -100,7 +95,9 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
                 if !function_builder.register_param(name.inner.clone(), ty, Some(index)) {
                     return Err(SyntaxError {
-                                   msg: format!("'{}' is already defined.", name.inner),
+                                   kind: SyntaxErrorKind::ParameterAlreadyDefined {
+                                       name: name.inner,
+                                   },
                                    span: name.span,
                                });
                 }
@@ -157,7 +154,9 @@ fn build_statement(fb: &mut FunctionBuilder,
             if ty == expr_value.ty {
                 if !fb.register_local_variable(name.clone(), ty.clone()) {
                     return Err(SyntaxError {
-                                   msg: format!("'{}' is already defined in this scope.", name),
+                                   kind: SyntaxErrorKind::LocalVariableAlreadyDefined {
+                                       name: name,
+                                   },
                                    span: stmt.span,
                                });
                 }
@@ -169,11 +168,10 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!(
-                            "Mismatching assignment types. Expected '{}', found '{}'.",
-                            ty,
-                            expr_value.ty
-                        ),
+                        kind: SyntaxErrorKind::MismatchingTypesAssignment {
+                            expected: ty,
+                            found: expr_value.ty,
+                        },
                         span: stmt.span,
                     })
             }
@@ -201,7 +199,9 @@ fn build_statement(fb: &mut FunctionBuilder,
 
             if cond_value.ty != ir::Type::Bool {
                 return Err(SyntaxError {
-                               msg: format!("Condition type must be bool. Found '{}'.", cond_value.ty),
+                               kind: SyntaxErrorKind::MismatchingTypesCondition {
+                                   found: cond_value.ty,
+                               },
                                span: error_span,
                            });
             }
@@ -268,7 +268,9 @@ fn build_statement(fb: &mut FunctionBuilder,
 
                 if cond_value.ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                                   msg: format!("Condition type must be bool. Found '{}'.", cond_value.ty),
+                                   kind: SyntaxErrorKind::MismatchingTypesCondition {
+                                       found: cond_value.ty,
+                                   },
                                    span: error_span,
                                });
                 }
@@ -297,7 +299,7 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!("Break outside loop."),
+                        kind: SyntaxErrorKind::BreakOutsideLoop,
                         span: stmt.span,
                     })
             }
@@ -308,7 +310,7 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!("Continue outside loop."),
+                        kind: SyntaxErrorKind::ContinueOutsideLoop,
                         span: stmt.span,
                     })
             }
@@ -333,7 +335,10 @@ fn build_statement(fb: &mut FunctionBuilder,
                 Ok(())
             } else {
                 Err(SyntaxError {
-                        msg: format!("Mismatching return type. Expected '{}', found '{}'", fb.ty.return_ty, value.ty),
+                        kind: SyntaxErrorKind::MismatchingTypesReturn {
+                            expected: *fb.ty.return_ty.clone(),
+                            found: value.ty,
+                        },
                         span: error_span,
                     })
             }
@@ -361,22 +366,25 @@ fn build_expression(fb: &mut FunctionBuilder,
                 if let Some(binop) = op {
                     let lhs_real_value = build_lvalue_to_rvalue(fb, lhs_value.clone());
 
-                    if let Some((irop, ty)) = typecheck_defs::binop_tyck(binop, &lhs_real_value.ty, &rhs_value.ty) {
+                    if let Some((irop, ty)) = typecheck_defs::binop_tyck(binop,
+                                                                         &lhs_real_value.ty,
+                                                                         &rhs_value.ty) {
                         let value = fb.new_temp_value(ty);
                         fb.push_statement(ir::Statement::Assign(
                             value.clone(),
                             ir::Expression::BinOp(irop, lhs_real_value, rhs_value)
                         ));
-                        fb.push_statement(ir::Statement::LValueSet(
-                            lhs_value,
-                            value.clone()
-                        ));
+                        fb.push_statement(ir::Statement::LValueSet(lhs_value, value.clone()));
                         Ok(value)
                     } else {
                         Err(SyntaxError {
-                            msg: format!("'{}' is not defined between '{}' and '{}'.", binop, lhs_real_value.ty, rhs_value.ty),
-                            span: expr.span,
-                        })
+                                kind: SyntaxErrorKind::BinaryOperationUndefined {
+                                    op: binop,
+                                    lhs_ty: lhs_real_value.ty,
+                                    rhs_ty: rhs_value.ty,
+                                },
+                                span: expr.span,
+                            })
                     }
                 } else {
                     if *sub == rhs_value.ty.clone() {
@@ -384,14 +392,17 @@ fn build_expression(fb: &mut FunctionBuilder,
                         Ok(rhs_value)
                     } else {
                         Err(SyntaxError {
-                                msg: format!("Mismatching type in assignment. Expected '{}', found '{}'", sub, rhs_value.ty),
+                                kind: SyntaxErrorKind::MismatchingTypesAssignment {
+                                    expected: *sub,
+                                    found: rhs_value.ty,
+                                },
                                 span: expr.span,
                             })
                     }
                 }
             } else {
                 Err(SyntaxError {
-                        msg: format!("Value not assignable."),
+                        kind: SyntaxErrorKind::NonAssignableExpression,
                         span: lhs_span,
                     })
             }
@@ -420,17 +431,16 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("Index must be of int type. Found '{}'.", index_value.ty),
+                            kind: SyntaxErrorKind::IndexNotInt { found: index_value.ty },
                             span: index_span,
                         })
                 }
             } else {
                 Err(SyntaxError {
-                        msg: format!("Subscript to a non-ptr. Found '{}'.", array_value.ty),
+                        kind: SyntaxErrorKind::NonSubscriptableType { found: array_value.ty },
                         span: array_span,
                     })
             }
-
         }
         ast::Expression::BinOp(code, lhs, rhs) => {
             if code == ast::BinOpCode::LogicalAnd {
@@ -487,9 +497,13 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                        msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_ty, rhs_ty),
-                        span: expr.span,
-                    })
+                                   kind: SyntaxErrorKind::BinaryOperationUndefined {
+                                       op: code,
+                                       lhs_ty: lhs_ty,
+                                       rhs_ty: rhs_ty,
+                                   },
+                                   span: expr.span,
+                               });
                 }
 
                 Ok(return_value)
@@ -547,9 +561,13 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
                     return Err(SyntaxError {
-                        msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_ty, rhs_ty),
-                        span: expr.span,
-                    })
+                                   kind: SyntaxErrorKind::BinaryOperationUndefined {
+                                       op: code,
+                                       lhs_ty: lhs_ty,
+                                       rhs_ty: rhs_ty,
+                                   },
+                                   span: expr.span,
+                               });
                 }
 
                 Ok(return_value)
@@ -559,7 +577,9 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let rhs_value = build_expression(fb, *rhs)?;
                 let rhs_value = build_lvalue_to_rvalue(fb, rhs_value);
 
-                if let Some((op, ty)) = typecheck_defs::binop_tyck(code, &lhs_value.ty, &rhs_value.ty) {
+                if let Some((op, ty)) = typecheck_defs::binop_tyck(code,
+                                                                   &lhs_value.ty,
+                                                                   &rhs_value.ty) {
                     let value = fb.new_temp_value(ty);
 
                     fb.push_statement(ir::Statement::Assign(value.clone(),
@@ -569,7 +589,11 @@ fn build_expression(fb: &mut FunctionBuilder,
                     Ok(value)
                 } else {
                     Err(SyntaxError {
-                            msg: format!("'{}' is not defined between '{}' and '{}'.", code, lhs_value.ty, rhs_value.ty),
+                            kind: SyntaxErrorKind::BinaryOperationUndefined {
+                                op: code,
+                                lhs_ty: lhs_value.ty,
+                                rhs_ty: rhs_value.ty,
+                            },
                             span: expr.span,
                         })
                 }
@@ -588,7 +612,10 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("'{}' is not defined for '{}'", code, sub_value.ty),
+                        kind: SyntaxErrorKind::UnaryOperationUndefined {
+                            op: code,
+                            expr_ty: sub_value.ty,
+                        },
                         span: expr.span,
                     })
             }
@@ -614,23 +641,23 @@ fn build_expression(fb: &mut FunctionBuilder,
                 if (func_ty.variadic && param_ty.len() < func_ty.params_ty.len()) ||
                    (!func_ty.variadic && param_ty.len() != func_ty.params_ty.len()) {
                     return Err(SyntaxError {
-                                   msg: format!("Mismatching params len. Expected {}, found {}.", func_ty.params_ty.len(), param_ty.len()),
+                                   kind: SyntaxErrorKind::MismatchingParamLen {
+                                       expected: func_ty.params_ty.len(),
+                                       found: param_ty.len(),
+                                   },
                                    span: expr.span,
                                });
                 }
 
                 for i in 0..func_ty.params_ty.len() {
                     if param_ty[i] != func_ty.params_ty[i] {
-                        return Err(
-                            SyntaxError {
-                                msg: format!(
-                                    "Mismatching parameter type. Expected '{}', found '{}'.",
-                                    func_ty.params_ty[i],
-                                    param_ty[i]
-                                ),
-                                span: param_spans[i],
-                            }
-                        );
+                        return Err(SyntaxError {
+                                       kind: SyntaxErrorKind::MismatchingTypesParameter {
+                                           expected: func_ty.params_ty[i].clone(),
+                                           found: param_ty[i].clone(),
+                                       },
+                                       span: param_spans[i],
+                                   });
                     }
                 }
 
@@ -641,7 +668,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("'{}' type is not callable.", func_value.ty),
+                        kind: SyntaxErrorKind::NonCallableType { found: func_value.ty },
                         span: expr.span,
                     })
             }
@@ -659,11 +686,10 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!(
-                            "A cast between '{}' and '{}' is not defined.",
-                            expr_value.ty,
-                            target_ty
-                        ),
+                        kind: SyntaxErrorKind::CastUndefined {
+                            expr_ty: expr_value.ty,
+                            target_ty: target_ty,
+                        },
                         span: expr.span,
                     })
             }
@@ -676,7 +702,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 Ok(value)
             } else {
                 Err(SyntaxError {
-                        msg: format!("'{}' is not defined here.", id),
+                        kind: SyntaxErrorKind::IdentifierUndefined { name: id },
                         span: expr.span,
                     })
             }
@@ -711,7 +737,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                         '0' => b'\0',
                         _ => {
                             return Err(SyntaxError {
-                                           msg: format!("Invalid escape char '{}'.", c),
+                                           kind: SyntaxErrorKind::InvalidEscapeChar { c: c },
                                            span: expr.span,
                                        })
                         }
@@ -751,7 +777,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             if values.len() == 0 {
                 return Err(SyntaxError {
-                               msg: format!("Empty array literal."),
+                               kind: SyntaxErrorKind::EmptyArrayLiteral,
                                span: expr.span,
                            });
             }
@@ -761,11 +787,10 @@ fn build_expression(fb: &mut FunctionBuilder,
             for i in 1..values.len() {
                 if values[i].ty != values[0].ty {
                     return Err(SyntaxError {
-                                   msg: format!(
-                                       "Mismatching type. Expected '{}', found '{}'",
-                                       values[0].ty,
-                                       values[i].ty
-                                   ),
+                                   kind: SyntaxErrorKind::MismatchingTypesArrayLiteral {
+                                       expected: values[0].ty.clone(),
+                                       found: values[i].ty.clone(),
+                                   },
                                    span: spans[i],
                                });
                 }
@@ -864,23 +889,24 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
             let mut slash = false;
             for c in val.chars() {
                 if slash {
-                    output.push(match c {
-                                    '\'' | '\"' => c,
-                                    'a' => '\x07',
-                                    'b' => '\x08',
-                                    'f' => '\x0c',
-                                    'n' => '\n',
-                                    'r' => '\r',
-                                    't' => '\t',
-                                    'v' => '\x0b',
-                                    '0' => '\0',
-                                    _ => {
-                                        return Err(SyntaxError {
-                                                       msg: format!("Invalid escape char '{}'.", c),
-                                                       span: span,
-                                                   })
-                                    }
-                                });
+                    let c_value = match c {
+                        '\'' | '\"' => c,
+                        'a' => '\x07',
+                        'b' => '\x08',
+                        'f' => '\x0c',
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        'v' => '\x0b',
+                        '0' => '\0',
+                        _ => {
+                            return Err(SyntaxError {
+                                           kind: SyntaxErrorKind::InvalidEscapeChar { c: c },
+                                           span: span,
+                                       })
+                        }
+                    };
+                    output.push(c_value);
                     slash = false;
                 } else if c == '\\' {
                     slash = true;
@@ -890,12 +916,12 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
             }
             if output.len() > 1 {
                 Err(SyntaxError {
-                        msg: format!("Multiple char in char literal."),
+                        kind: SyntaxErrorKind::MultipleCharLiteral,
                         span: span,
                     })
             } else if output.len() == 0 {
                 Err(SyntaxError {
-                        msg: format!("Empty char literal."),
+                        kind: SyntaxErrorKind::EmptyCharLiteral,
                         span: span,
                     })
             } else {
@@ -928,7 +954,7 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "char" => Ok(ir::Type::Char),
                 other => {
                     Err(SyntaxError {
-                            msg: format!("Undefined type '{}'.", other),
+                            kind: SyntaxErrorKind::UndefinedType { name: other.to_string() },
                             span: parse_ty.span,
                         })
                 }

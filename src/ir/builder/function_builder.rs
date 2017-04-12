@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use ir;
-use ir::builder::SyntaxError;
 use ir::symbol_table::SymbolTable;
+use syntax_error::{SyntaxError, SyntaxErrorKind};
 use span::Span;
 
 #[derive(Debug, Clone)]
@@ -115,9 +115,9 @@ impl<'a> FunctionBuilder<'a> {
 
         if panic_preds.contains(&ir::BasicBlockId(0)) {
             return Err(SyntaxError {
-                           msg: format!("There are paths in this functions that may not return."),
-                           span: span,
-                       });
+                kind: SyntaxErrorKind::NotAllPathsReturnAValue,
+                span: span
+            });
         } else {
             basic_blocks.pop();
         }

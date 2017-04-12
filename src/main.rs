@@ -14,6 +14,7 @@ mod comment_remover;
 mod parser;
 mod ast;
 mod ir;
+mod syntax_error;
 mod codegen;
 mod diagnostics;
 mod outer;
