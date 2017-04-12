@@ -1,6 +1,7 @@
-use std::str::CharIndices;
 use std::iter::Peekable;
 use std::str::FromStr;
+
+use comment_remover::CommentRemover;
 
 use itertools::Itertools;
 
@@ -68,12 +69,14 @@ pub struct LexicalError {
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'input> {
-    chars: Peekable<CharIndices<'input>>,
+    chars: Peekable<CommentRemover<'input>>,
 }
 
 impl<'input> Lexer<'input> {
     pub fn new(input: &'input str) -> Self {
-        Lexer { chars: input.char_indices().peekable() }
+        Lexer {
+            chars: CommentRemover::new(input).peekable()
+        }
     }
 
     fn if_next(&mut self, c: char, true_tok: Token, false_tok: Token) -> Result<Token, Token> {

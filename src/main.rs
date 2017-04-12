@@ -10,6 +10,7 @@ use std::path::PathBuf;
 mod pipeline;
 mod span;
 mod lexer;
+mod comment_remover;
 mod parser;
 mod ast;
 mod ir;
