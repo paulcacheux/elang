@@ -4,13 +4,13 @@ use ir::Type;
 use ast;
 
 #[derive(Debug, Clone)]
-pub struct SyntaxError {
-    pub kind: SyntaxErrorKind,
+pub struct SemanticError {
+    pub kind: SemanticErrorKind,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub enum SyntaxErrorKind {
+pub enum SemanticErrorKind {
     FunctionAlreadyDefined { name: String },
     ParameterAlreadyDefined { name: String },
     LocalVariableAlreadyDefined { name: String },
@@ -42,9 +42,9 @@ pub enum SyntaxErrorKind {
     NotAllPathsReturnAValue,
 }
 
-impl fmt::Display for SyntaxErrorKind {
+impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::SyntaxErrorKind::*;
+        use self::SemanticErrorKind::*;
         match *self {
             FunctionAlreadyDefined { ref name } => write!(f, "'{}' function is already defined.", name),
             ParameterAlreadyDefined { ref name } => {

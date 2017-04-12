@@ -4,7 +4,7 @@ use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
 
 use span::Span;
-use syntax_error::SyntaxError;
+use semantic_error::SemanticError;
 
 pub struct Error<'a> {
     msg: String,
@@ -65,7 +65,7 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
     }
 }
 
-impl<'a> ToError<'a> for SyntaxError {
+impl<'a> ToError<'a> for SemanticError {
     fn convert(self, input: &'a str) -> Error<'a> {
         Error {
             msg: self.kind.to_string(),

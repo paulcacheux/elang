@@ -4,7 +4,7 @@ use span::{Spanned, Span};
 use pipeline;
 
 use ir::symbol_table::SymbolTable;
-use syntax_error::{SyntaxError, SyntaxErrorKind};
+use semantic_error::{SemanticError, SemanticErrorKind};
 
 mod typecheck_defs;
 mod function_builder;
@@ -13,7 +13,7 @@ use self::function_builder::FunctionBuilder;
 pub fn build_translation_unit(tu: ast::TranslationUnit,
                               st: &mut SymbolTable,
                               options: &pipeline::CompileOptions)
-                              -> Result<ir::TranslationUnit, SyntaxError> {
+                              -> Result<ir::TranslationUnit, SemanticError> {
     let mut declarations = Vec::new();
 
     for import in tu.imports {
@@ -32,7 +32,7 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
 
 fn build_declaration(decl: Spanned<ast::Declaration>,
                      symbol_table: &mut SymbolTable)
-                     -> Result<ir::Declaration, SyntaxError> {
+                     -> Result<ir::Declaration, SemanticError> {
     match decl.inner {
         ast::Declaration::ExternFunction {
             name,
@@ -54,8 +54,8 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
-                return Err(SyntaxError {
-                               kind: SyntaxErrorKind::FunctionAlreadyDefined { name: name },
+                return Err(SemanticError {
+                               kind: SemanticErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
                            });
             }
@@ -84,8 +84,8 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             };
 
             if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
-                return Err(SyntaxError {
-                               kind: SyntaxErrorKind::FunctionAlreadyDefined { name: name },
+                return Err(SemanticError {
+                               kind: SemanticErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
                            });
             }
@@ -94,8 +94,8 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
             function_builder.symbol_table.start_local_scope();
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
                 if !function_builder.register_param(name.inner.clone(), ty, Some(index)) {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::ParameterAlreadyDefined {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::ParameterAlreadyDefined {
                                        name: name.inner,
                                    },
                                    span: name.span,
@@ -127,7 +127,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
 fn build_compound_statement(fb: &mut FunctionBuilder,
                             stmt: Spanned<ast::CompoundStatement>)
-                            -> Result<(), SyntaxError> {
+                            -> Result<(), SemanticError> {
     fb.symbol_table.start_local_scope();
     for s in stmt.inner.0 {
         build_statement(fb, s)?;
@@ -138,7 +138,7 @@ fn build_compound_statement(fb: &mut FunctionBuilder,
 
 fn build_statement(fb: &mut FunctionBuilder,
                    stmt: Spanned<ast::Statement>)
-                   -> Result<(), SyntaxError> {
+                   -> Result<(), SemanticError> {
     match stmt.inner {
         ast::Statement::Compound(c) => build_compound_statement(fb, c),
         ast::Statement::Let { name, ty, expr } => {
@@ -153,8 +153,8 @@ fn build_statement(fb: &mut FunctionBuilder,
 
             if ty == expr_value.ty {
                 if !fb.register_local_variable(name.clone(), ty.clone()) {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::LocalVariableAlreadyDefined {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::LocalVariableAlreadyDefined {
                                        name: name,
                                    },
                                    span: stmt.span,
@@ -167,8 +167,8 @@ fn build_statement(fb: &mut FunctionBuilder,
                 fb.push_statement(ir::Statement::LValueSet(lvalue, expr_value));
                 Ok(())
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::MismatchingTypesAssignment {
+                Err(SemanticError {
+                        kind: SemanticErrorKind::MismatchingTypesAssignment {
                             expected: ty,
                             found: expr_value.ty,
                         },
@@ -198,8 +198,8 @@ fn build_statement(fb: &mut FunctionBuilder,
             let cond_value = build_lvalue_to_rvalue(fb, cond_value);
 
             if cond_value.ty != ir::Type::Bool {
-                return Err(SyntaxError {
-                               kind: SyntaxErrorKind::MismatchingTypesCondition {
+                return Err(SemanticError {
+                               kind: SemanticErrorKind::MismatchingTypesCondition {
                                    found: cond_value.ty,
                                },
                                span: error_span,
@@ -267,8 +267,8 @@ fn build_statement(fb: &mut FunctionBuilder,
                 let cond_value = build_lvalue_to_rvalue(fb, cond_value);
 
                 if cond_value.ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::MismatchingTypesCondition {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::MismatchingTypesCondition {
                                        found: cond_value.ty,
                                    },
                                    span: error_span,
@@ -298,8 +298,8 @@ fn build_statement(fb: &mut FunctionBuilder,
                 fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::BreakOutsideLoop,
+                Err(SemanticError {
+                        kind: SemanticErrorKind::BreakOutsideLoop,
                         span: stmt.span,
                     })
             }
@@ -309,8 +309,8 @@ fn build_statement(fb: &mut FunctionBuilder,
                 fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::ContinueOutsideLoop,
+                Err(SemanticError {
+                        kind: SemanticErrorKind::ContinueOutsideLoop,
                         span: stmt.span,
                     })
             }
@@ -334,8 +334,8 @@ fn build_statement(fb: &mut FunctionBuilder,
                 fb.push_terminator(Some(ir::Terminator::Ret(value)));
                 Ok(())
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::MismatchingTypesReturn {
+                Err(SemanticError {
+                        kind: SemanticErrorKind::MismatchingTypesReturn {
                             expected: *fb.ty.return_ty.clone(),
                             found: value.ty,
                         },
@@ -353,7 +353,7 @@ fn build_statement(fb: &mut FunctionBuilder,
 
 fn build_expression(fb: &mut FunctionBuilder,
                     expr: Spanned<ast::Expression>)
-                    -> Result<ir::Value, SyntaxError> {
+                    -> Result<ir::Value, SemanticError> {
     match expr.inner {
         ast::Expression::Assign(op, lhs, rhs) => {
             let lhs_span = lhs.span;
@@ -377,8 +377,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                         fb.push_statement(ir::Statement::LValueSet(lhs_value, value.clone()));
                         Ok(value)
                     } else {
-                        Err(SyntaxError {
-                                kind: SyntaxErrorKind::BinaryOperationUndefined {
+                        Err(SemanticError {
+                                kind: SemanticErrorKind::BinaryOperationUndefined {
                                     op: binop,
                                     lhs_ty: lhs_real_value.ty,
                                     rhs_ty: rhs_value.ty,
@@ -391,8 +391,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                         fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
                         Ok(rhs_value)
                     } else {
-                        Err(SyntaxError {
-                                kind: SyntaxErrorKind::MismatchingTypesAssignment {
+                        Err(SemanticError {
+                                kind: SemanticErrorKind::MismatchingTypesAssignment {
                                     expected: *sub,
                                     found: rhs_value.ty,
                                 },
@@ -401,8 +401,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                     }
                 }
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::NonAssignableExpression,
+                Err(SemanticError {
+                        kind: SemanticErrorKind::NonAssignableExpression,
                         span: lhs_span,
                     })
             }
@@ -430,14 +430,14 @@ fn build_expression(fb: &mut FunctionBuilder,
                     ));
                     Ok(value)
                 } else {
-                    Err(SyntaxError {
-                            kind: SyntaxErrorKind::IndexNotInt { found: index_value.ty },
+                    Err(SemanticError {
+                            kind: SemanticErrorKind::IndexNotInt { found: index_value.ty },
                             span: index_span,
                         })
                 }
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::NonSubscriptableType { found: array_value.ty },
+                Err(SemanticError {
+                        kind: SemanticErrorKind::NonSubscriptableType { found: array_value.ty },
                         span: array_span,
                     })
             }
@@ -496,8 +496,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                                                         ir::Expression::LValueLoad(return_lvalue)));
 
                 if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::BinaryOperationUndefined {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::BinaryOperationUndefined {
                                        op: code,
                                        lhs_ty: lhs_ty,
                                        rhs_ty: rhs_ty,
@@ -560,8 +560,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                                                         ir::Expression::LValueLoad(return_lvalue)));
 
                 if lhs_ty != ir::Type::Bool || rhs_ty != ir::Type::Bool {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::BinaryOperationUndefined {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::BinaryOperationUndefined {
                                        op: code,
                                        lhs_ty: lhs_ty,
                                        rhs_ty: rhs_ty,
@@ -588,8 +588,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                                                                                   rhs_value)));
                     Ok(value)
                 } else {
-                    Err(SyntaxError {
-                            kind: SyntaxErrorKind::BinaryOperationUndefined {
+                    Err(SemanticError {
+                            kind: SemanticErrorKind::BinaryOperationUndefined {
                                 op: code,
                                 lhs_ty: lhs_value.ty,
                                 rhs_ty: rhs_value.ty,
@@ -611,8 +611,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                                                         ir::Expression::UnOp(op, sub_value)));
                 Ok(value)
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::UnaryOperationUndefined {
+                Err(SemanticError {
+                        kind: SemanticErrorKind::UnaryOperationUndefined {
                             op: code,
                             expr_ty: sub_value.ty,
                         },
@@ -640,8 +640,8 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 if (func_ty.variadic && param_ty.len() < func_ty.params_ty.len()) ||
                    (!func_ty.variadic && param_ty.len() != func_ty.params_ty.len()) {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::MismatchingParamLen {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::MismatchingParamLen {
                                        expected: func_ty.params_ty.len(),
                                        found: param_ty.len(),
                                    },
@@ -651,8 +651,8 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 for i in 0..func_ty.params_ty.len() {
                     if param_ty[i] != func_ty.params_ty[i] {
-                        return Err(SyntaxError {
-                                       kind: SyntaxErrorKind::MismatchingTypesParameter {
+                        return Err(SemanticError {
+                                       kind: SemanticErrorKind::MismatchingTypesParameter {
                                            expected: func_ty.params_ty[i].clone(),
                                            found: param_ty[i].clone(),
                                        },
@@ -667,8 +667,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                                                                                  param_values)));
                 Ok(value)
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::NonCallableType { found: func_value.ty },
+                Err(SemanticError {
+                        kind: SemanticErrorKind::NonCallableType { found: func_value.ty },
                         span: expr.span,
                     })
             }
@@ -685,8 +685,8 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 Ok(value)
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::CastUndefined {
+                Err(SemanticError {
+                        kind: SemanticErrorKind::CastUndefined {
                             expr_ty: expr_value.ty,
                             target_ty: target_ty,
                         },
@@ -701,8 +701,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                 fb.push_statement(ir::Statement::Assign(value.clone(), expr));
                 Ok(value)
             } else {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::IdentifierUndefined { name: id },
+                Err(SemanticError {
+                        kind: SemanticErrorKind::IdentifierUndefined { name: id },
                         span: expr.span,
                     })
             }
@@ -736,8 +736,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                         'v' => b'\x0b',
                         '0' => b'\0',
                         _ => {
-                            return Err(SyntaxError {
-                                           kind: SyntaxErrorKind::InvalidEscapeChar { c: c },
+                            return Err(SemanticError {
+                                           kind: SemanticErrorKind::InvalidEscapeChar { c: c },
                                            span: expr.span,
                                        })
                         }
@@ -776,8 +776,8 @@ fn build_expression(fb: &mut FunctionBuilder,
             }
 
             if values.len() == 0 {
-                return Err(SyntaxError {
-                               kind: SyntaxErrorKind::EmptyArrayLiteral,
+                return Err(SemanticError {
+                               kind: SemanticErrorKind::EmptyArrayLiteral,
                                span: expr.span,
                            });
             }
@@ -786,8 +786,8 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             for i in 1..values.len() {
                 if values[i].ty != values[0].ty {
-                    return Err(SyntaxError {
-                                   kind: SyntaxErrorKind::MismatchingTypesArrayLiteral {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::MismatchingTypesArrayLiteral {
                                        expected: values[0].ty.clone(),
                                        found: values[i].ty.clone(),
                                    },
@@ -878,7 +878,7 @@ fn build_array_with_values(fb: &mut FunctionBuilder,
     array_value
 }
 
-fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxError> {
+fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SemanticError> {
     match lit {
         ast::Literal::Unit => Ok(ir::Literal::Unit),
         ast::Literal::Int(val) => Ok(ir::Literal::Int(val)),
@@ -900,8 +900,8 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
                         'v' => '\x0b',
                         '0' => '\0',
                         _ => {
-                            return Err(SyntaxError {
-                                           kind: SyntaxErrorKind::InvalidEscapeChar { c: c },
+                            return Err(SemanticError {
+                                           kind: SemanticErrorKind::InvalidEscapeChar { c: c },
                                            span: span,
                                        })
                         }
@@ -915,13 +915,13 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SyntaxErr
                 }
             }
             if output.len() > 1 {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::MultipleCharLiteral,
+                Err(SemanticError {
+                        kind: SemanticErrorKind::MultipleCharLiteral,
                         span: span,
                     })
             } else if output.len() == 0 {
-                Err(SyntaxError {
-                        kind: SyntaxErrorKind::EmptyCharLiteral,
+                Err(SemanticError {
+                        kind: SemanticErrorKind::EmptyCharLiteral,
                         span: span,
                     })
             } else {
@@ -942,7 +942,7 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
     }
 }
 
-fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError> {
+fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SemanticError> {
     match parse_ty.inner {
         ast::ParseType::Unit => Ok(ir::Type::Unit),
         ast::ParseType::Ptr(sub) => Ok(ir::Type::Ptr(Box::new(build_type(*sub)?))),
@@ -953,8 +953,8 @@ fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SyntaxError
                 "bool" => Ok(ir::Type::Bool),
                 "char" => Ok(ir::Type::Char),
                 other => {
-                    Err(SyntaxError {
-                            kind: SyntaxErrorKind::UndefinedType { name: other.to_string() },
+                    Err(SemanticError {
+                            kind: SemanticErrorKind::UndefinedType { name: other.to_string() },
                             span: parse_ty.span,
                         })
                 }

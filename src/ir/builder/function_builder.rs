@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use ir;
 use ir::symbol_table::SymbolTable;
-use syntax_error::{SyntaxError, SyntaxErrorKind};
+use semantic_error::{SemanticError, SemanticErrorKind};
 use span::Span;
 
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl<'a> FunctionBuilder<'a> {
         }
     }
 
-    pub fn into_function(self, span: Span) -> Result<ir::Declaration, SyntaxError> {
+    pub fn into_function(self, span: Span) -> Result<ir::Declaration, SemanticError> {
         #[derive(Clone)]
         enum PanicTerminator {
             Real(ir::Terminator),
@@ -114,8 +114,8 @@ impl<'a> FunctionBuilder<'a> {
         }
 
         if panic_preds.contains(&ir::BasicBlockId(0)) {
-            return Err(SyntaxError {
-                kind: SyntaxErrorKind::NotAllPathsReturnAValue,
+            return Err(SemanticError {
+                kind: SemanticErrorKind::NotAllPathsReturnAValue,
                 span: span
             });
         } else {
