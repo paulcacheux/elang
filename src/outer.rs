@@ -27,9 +27,21 @@ pub fn main_outer(tu: ir::TranslationUnit,
             let mut writer = get_writer(&options.output_path)?;
             codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
         }
-        OutputType::Run => output_llvm(tu, input_path, options),
-        OutputType::Exec => Ok(()),
-        _ => Ok(()),
+        OutputType::Run => {
+            let tmp_dir = TempDir::new("elang-compiler")?;
+            let exec_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
+            if !run_command(exec_path, &[])?.success() {
+                panic!("exec fail");
+            }
+            Ok(())
+        }
+        OutputType::Exec => {
+            let tmp_dir = TempDir::new("elang-compiler")?;
+            let exec_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
+            let default_path = PathBuf::from("a.out");
+            std::fs::copy(exec_path, options.output_path.as_ref().unwrap_or(&default_path))?;
+            Ok(())
+        }
     }
 }
 
@@ -47,18 +59,18 @@ fn executable_name(path: &str) -> String {
 
 fn output_llvm(tu: ir::TranslationUnit,
                input_path: &str,
+               tmp_dir_path: &Path,
                options: &CompileOptions)
-               -> io::Result<()> {
+               -> io::Result<PathBuf> {
     fn path_to_str(path: &PathBuf) -> &str {
         path.to_str().unwrap()
     }
 
     let exec_name = executable_name(input_path);
 
-    let tmp_dir = TempDir::new("elang-compiler")?;
-    let llvm_path = tmp_dir.path().join(format!("{}.ll", exec_name));
-    let obj_path = tmp_dir.path().join(format!("{}.o", exec_name));
-    let exec_path = tmp_dir.path().join(exec_name);
+    let llvm_path = tmp_dir_path.join(format!("{}.ll", exec_name));
+    let obj_path = tmp_dir_path.join(format!("{}.o", exec_name));
+    let exec_path = tmp_dir_path.join(exec_name);
 
     let mut llvm_file = File::create(&llvm_path)?;
     codegen::llvm_gen::gen_translation_unit(&mut llvm_file, tu).expect("error llvm gen");
@@ -85,11 +97,7 @@ fn output_llvm(tu: ir::TranslationUnit,
         panic!("clang fail");
     }
 
-    if !run_command(exec_path, &[])?.success() {
-        panic!("exec fail");
-    }
-
-    Ok(())
+    Ok(exec_path)
 }
 
 fn run_command<S: AsRef<std::ffi::OsStr>>(ex: S,
