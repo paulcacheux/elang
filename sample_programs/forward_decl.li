@@ -1,0 +1,10 @@
+import io;
+
+fn main() -> int {
+    say_hello();
+    return 0;
+}
+
+fn say_hello() {
+    print_string("Hello World\n");
+}

@@ -7,10 +7,23 @@ use std::io;
 
 pub fn gen_translation_unit<F: Write>(f: &mut F, tu: ir::TranslationUnit) -> io::Result<()> {
     let mut globals = HashMap::new();
+    for decl in &tu.declarations {
+        register_declaration(decl, &mut globals);
+    }
+
     for declaration in tu.declarations {
         gen_declaration(f, declaration, &mut globals)?;
     }
     Ok(())
+}
+
+fn register_declaration(decl: &ir::Declaration, globals: &mut HashMap<String, ir::FunctionType>) {
+    match *decl {
+        ir::Declaration::ExternFunction { ref name, ref ty } |
+        ir::Declaration::Function { ref name, ref ty, .. } => {
+            globals.insert(name.clone(), ty.clone());
+        }
+    }
 }
 
 fn gen_declaration<F: Write>(f: &mut F,
@@ -19,7 +32,6 @@ fn gen_declaration<F: Write>(f: &mut F,
                              -> io::Result<()> {
     match declaration {
         ir::Declaration::ExternFunction { name, ty } => {
-            globals.insert(name.clone(), ty.clone());
             writeln!(f,
                      "declare {} @{}({}{})",
                      type_to_string(*ty.return_ty),
@@ -33,7 +45,6 @@ fn gen_declaration<F: Write>(f: &mut F,
             locals,
             bbs,
         } => {
-            globals.insert(name.clone(), ty.clone());
             writeln!(f,
                      "define {} @{}({}) {{\nentry:",
                      type_to_string(*ty.return_ty),

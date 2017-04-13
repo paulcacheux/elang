@@ -22,24 +22,37 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
         declarations.extend(imported_tu.declarations);
     }
 
-    declarations.reserve(tu.declarations.len());
+    let mut predeclarations = Vec::with_capacity(tu.declarations.len());
     for decl in tu.declarations {
-        declarations.push(build_declaration(decl, st)?);
+        predeclarations.push(register_declaration(decl, st)?);
+    }
+
+    declarations.reserve(predeclarations.len());
+    for predecl in predeclarations {
+        declarations.push(build_predeclaration(predecl, st)?);
     }
 
     Ok(ir::TranslationUnit { declarations: declarations })
 }
 
-fn build_declaration(decl: Spanned<ast::Declaration>,
-                     symbol_table: &mut SymbolTable)
-                     -> Result<ir::Declaration, SemanticError> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum PreDeclaration {
+    ExternFunction {
+        name: String,
+        ty: ir::FunctionType,
+    },
+    Function {
+        name: String,
+        param_names: Vec<Spanned<String>>,
+        ty: ir::FunctionType,
+        stmt: Spanned<ast::CompoundStatement>,
+        span: Span
+    },
+}
+
+fn register_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolTable) -> Result<PreDeclaration, SemanticError> {
     match decl.inner {
-        ast::Declaration::ExternFunction {
-            name,
-            params,
-            variadic,
-            return_ty,
-        } => {
+        ast::Declaration::ExternFunction { name, params, variadic, return_ty } => {
             let return_ty = build_type(return_ty)?;
 
             let mut param_types = Vec::with_capacity(params.len());
@@ -60,7 +73,10 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
-            Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
+            Ok(PreDeclaration::ExternFunction {
+                name: name,
+                ty: ty,
+            })
         }
         ast::Declaration::Function {
             name,
@@ -90,6 +106,34 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
+            Ok(PreDeclaration::Function {
+                name: name,
+                param_names: param_names,
+                ty: ty,
+                stmt: stmt,
+                span: decl.span
+            })
+        }
+    }
+}
+
+fn build_predeclaration(predecl: PreDeclaration,
+                     symbol_table: &mut SymbolTable)
+                     -> Result<ir::Declaration, SemanticError> {
+    match predecl {
+        PreDeclaration::ExternFunction {
+            name,
+            ty,
+        } => {
+            Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
+        }
+        PreDeclaration::Function {
+            name,
+            param_names,
+            ty,
+            stmt,
+            span,
+        } => {
             let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
             function_builder.symbol_table.start_local_scope();
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
@@ -120,7 +164,7 @@ fn build_declaration(decl: Spanned<ast::Declaration>,
 
             function_builder.symbol_table.end_local_scope();
 
-            function_builder.into_function(decl.span)
+            function_builder.into_function(span)
         }
     }
 }
