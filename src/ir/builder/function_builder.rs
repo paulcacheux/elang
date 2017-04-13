@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use ir;
-use ir::symbol_table::SymbolTable;
+use ir::SymbolTable;
 use semantic_error::{SemanticError, SemanticErrorKind};
 use span::Span;
 

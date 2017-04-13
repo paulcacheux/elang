@@ -10,7 +10,7 @@ use ast;
 use diagnostics;
 use ir;
 
-use ir::symbol_table::SymbolTable;
+use ir::SymbolTable;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OutputType {

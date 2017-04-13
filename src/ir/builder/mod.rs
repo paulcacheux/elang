@@ -3,7 +3,7 @@ use ast;
 use span::{Spanned, Span};
 use pipeline;
 
-use ir::symbol_table::SymbolTable;
+use ir::SymbolTable;
 use semantic_error::{SemanticError, SemanticErrorKind};
 
 mod typecheck_defs;
