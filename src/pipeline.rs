@@ -15,7 +15,6 @@ use ir::symbol_table::SymbolTable;
 #[derive(Debug, Clone, Copy)]
 pub enum OutputType {
     None,
-    C,
     LLVM,
     Run,
 }
@@ -24,7 +23,6 @@ impl OutputType {
     pub fn new(ot: &str) -> Option<OutputType> {
         match ot {
             "none" => Some(OutputType::None),
-            "c" => Some(OutputType::C),
             "llvm" => Some(OutputType::LLVM),
             "run" => Some(OutputType::Run),
             _ => None

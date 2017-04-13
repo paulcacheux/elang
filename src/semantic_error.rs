@@ -17,7 +17,7 @@ pub enum SemanticErrorKind {
     MismatchingTypesAssignment { expected: Type, found: Type },
     MismatchingTypesCondition { found: Type },
     MismatchingTypesReturn { expected: Type, found: Type },
-    MismatchingTypesParameter { expected: Type, found: Type },
+    MismatchingTypesArgument { expected: Type, found: Type },
     MismatchingTypesArrayLiteral { expected: Type, found: Type },
     UndefinedType { name: String },
     BinaryOperationUndefined {
@@ -71,9 +71,9 @@ impl fmt::Display for SemanticErrorKind {
                        expected,
                        found)
             }
-            MismatchingTypesParameter { ref expected, ref found } => {
+            MismatchingTypesArgument { ref expected, ref found } => {
                 write!(f,
-                       "Mismatching types in parameter. Expected '{}', found '{}'.",
+                       "Mismatching types in argument. Expected '{}', found '{}'.",
                        expected,
                        found)
             }
@@ -105,7 +105,7 @@ impl fmt::Display for SemanticErrorKind {
             NonCallableType { ref found } => write!(f, "'{}' type is not callable", found),
             MismatchingParamLen { expected, found } => {
                 write!(f,
-                       "This function takes '{}' parameters, but '{}' was supplied.",
+                       "This function takes '{}' parameters, but '{}' arguments were supplied.",
                        expected,
                        found)
             }

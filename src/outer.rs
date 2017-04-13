@@ -20,10 +20,6 @@ fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>>{
 pub fn main_outer(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) -> io::Result<()> {
     match options.output_type {
         OutputType::None => Ok(()),
-        OutputType::C => {
-            let mut writer = get_writer(&options.output_path)?;
-            codegen::c_gen::gen_translation_unit(&mut writer, tu)
-        }
         OutputType::LLVM => {
             let mut writer = get_writer(&options.output_path)?;
             codegen::llvm_gen::gen_translation_unit(&mut writer, tu)

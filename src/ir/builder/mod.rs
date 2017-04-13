@@ -664,43 +664,43 @@ fn build_expression(fb: &mut FunctionBuilder,
                     })
             }
         }
-        ast::Expression::FuncCall(func, params) => {
+        ast::Expression::FuncCall(func, args) => {
             let func_value = build_expression(fb, *func)?;
             let func_value = build_lvalue_to_rvalue(fb, func_value);
 
             if let ir::Type::Function(func_ty) = func_value.ty.clone() {
-                let mut param_spans = Vec::with_capacity(params.len());
-                let mut param_ty = Vec::with_capacity(params.len());
-                let mut param_values = Vec::with_capacity(params.len());
-                for param in params {
-                    param_spans.push(param.span);
-                    let param = build_expression(fb, param)?;
-                    let param = build_lvalue_to_rvalue(fb, param);
+                let mut args_span = Vec::with_capacity(args.len());
+                let mut args_ty = Vec::with_capacity(args.len());
+                let mut args_values = Vec::with_capacity(args.len());
+                for arg in args {
+                    args_span.push(arg.span);
+                    let arg = build_expression(fb, arg)?;
+                    let arg = build_lvalue_to_rvalue(fb, arg);
 
-                    param_ty.push(param.ty.clone());
-                    param_values.push(param);
+                    args_ty.push(arg.ty.clone());
+                    args_values.push(arg);
                 }
 
 
-                if (func_ty.variadic && param_ty.len() < func_ty.params_ty.len()) ||
-                   (!func_ty.variadic && param_ty.len() != func_ty.params_ty.len()) {
+                if (func_ty.variadic && args_ty.len() < func_ty.params_ty.len()) ||
+                   (!func_ty.variadic && args_ty.len() != func_ty.params_ty.len()) {
                     return Err(SemanticError {
                                    kind: SemanticErrorKind::MismatchingParamLen {
                                        expected: func_ty.params_ty.len(),
-                                       found: param_ty.len(),
+                                       found: args_ty.len(),
                                    },
                                    span: expr.span,
                                });
                 }
 
                 for i in 0..func_ty.params_ty.len() {
-                    if param_ty[i] != func_ty.params_ty[i] {
+                    if args_ty[i] != func_ty.params_ty[i] {
                         return Err(SemanticError {
-                                       kind: SemanticErrorKind::MismatchingTypesParameter {
+                                       kind: SemanticErrorKind::MismatchingTypesArgument {
                                            expected: func_ty.params_ty[i].clone(),
-                                           found: param_ty[i].clone(),
+                                           found: args_ty[i].clone(),
                                        },
-                                       span: param_spans[i],
+                                       span: args_span[i],
                                    });
                     }
                 }
@@ -708,7 +708,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let value = fb.new_temp_value(*func_ty.return_ty);
                 fb.push_statement(ir::Statement::Assign(value.clone(),
                                                         ir::Expression::FuncCall(func_value,
-                                                                                 param_values)));
+                                                                                 args_values)));
                 Ok(value)
             } else {
                 Err(SemanticError {

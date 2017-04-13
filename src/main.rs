@@ -45,7 +45,7 @@ fn main() {
                  .long("type")
                  .short("t")
                  .takes_value(true)
-                 .possible_values(&["c", "llvm", "none", "run"]))
+                 .possible_values(&["llvm", "none", "run"]))
         .get_matches();
 
     let input_path = PathBuf::from(matches.value_of("INPUT").unwrap());
