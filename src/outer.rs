@@ -9,7 +9,7 @@ use pipeline::{CompileOptions, OutputType};
 use ir;
 use codegen;
 
-fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>>{
+fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>> {
     if let Some(ref output_path) = *output_path {
         Ok(Box::new(std::fs::File::create(output_path)?))
     } else {
@@ -17,16 +17,17 @@ fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>>{
     }
 }
 
-pub fn main_outer(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) -> io::Result<()> {
+pub fn main_outer(tu: ir::TranslationUnit,
+                  input_path: &str,
+                  options: &CompileOptions)
+                  -> io::Result<()> {
     match options.output_type {
         OutputType::None => Ok(()),
         OutputType::LLVM => {
             let mut writer = get_writer(&options.output_path)?;
             codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
         }
-        OutputType::Run => {
-            run_with_llvm(tu, input_path, options)
-        }
+        OutputType::Run => run_with_llvm(tu, input_path, options),
     }
 }
 
@@ -42,7 +43,14 @@ fn executable_name(path: &str) -> String {
     name_parts.join(".")
 }
 
-fn run_with_llvm(tu: ir::TranslationUnit, input_path: &str, options: &CompileOptions) -> io::Result<()> {
+fn run_with_llvm(tu: ir::TranslationUnit,
+                 input_path: &str,
+                 options: &CompileOptions)
+                 -> io::Result<()> {
+    fn path_to_str(path: &PathBuf) -> &str {
+        path.to_str().unwrap()
+    }
+
     let exec_name = executable_name(input_path);
 
     let tmp_dir = TempDir::new("elang-compiler")?;
@@ -53,44 +61,32 @@ fn run_with_llvm(tu: ir::TranslationUnit, input_path: &str, options: &CompileOpt
     let mut llvm_file = File::create(&llvm_path)?;
     codegen::llvm_gen::gen_translation_unit(&mut llvm_file, tu).expect("error llvm gen");
 
-    if options.opt {
-        if !std::process::Command::new("opt")
-            .arg("-O3")
-            .arg("-S")
-            .arg(llvm_path.to_str().unwrap())
-            .arg("-o").arg(llvm_path.to_str().unwrap())
-            .spawn()?
-            .wait()?
-            .success() {
-            panic!("opt fail");
-        }
+    if options.opt &&
+       !run_command("opt",
+                    &["-O3", "-S", path_to_str(&llvm_path), "-o", path_to_str(&llvm_path)])?
+                .success() {
+        panic!("opt fail");
     }
 
-    if !std::process::Command::new("llc")
-        .arg("-filetype=obj")
-        .arg(llvm_path.to_str().unwrap())
-        .arg("-o").arg(obj_path.to_str().unwrap())
-        .spawn()?
-        .wait()?
-        .success() {
+    if !run_command("llc",
+                    &["-filetype=obj", path_to_str(&llvm_path), "-o", path_to_str(&obj_path)])?
+                .success() {
         panic!("llc fail");
     }
 
-    if !std::process::Command::new("clang")
-        .arg(obj_path.to_str().unwrap())
-        .arg("-o").arg(exec_path.to_str().unwrap())
-        .spawn()?
-        .wait()?
-        .success() {
+    if !run_command("clang",
+                    &[path_to_str(&obj_path), "-o", path_to_str(&exec_path)])?
+                .success() {
         panic!("clang fail");
     }
 
-    if !std::process::Command::new(exec_path)
-        .spawn()?
-        .wait()?
-        .success() {
+    if !run_command(exec_path, &[])?.success() {
         panic!("exec fail");
     }
 
     Ok(())
+}
+
+fn run_command<S: AsRef<std::ffi::OsStr>>(ex: S, args: &[&str]) -> io::Result<std::process::ExitStatus> {
+    std::process::Command::new(ex).args(args).status()
 }
