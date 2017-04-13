@@ -28,7 +28,7 @@ pub fn main_outer(tu: ir::TranslationUnit,
             codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
         }
         OutputType::Run => output_llvm(tu, input_path, options),
-        OutputType::Exec => {}
+        OutputType::Exec => Ok(()),
         _ => Ok(()),
     }
 }
