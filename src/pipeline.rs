@@ -14,17 +14,19 @@ use ir::SymbolTable;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OutputType {
-    None,
+    Check,
     LLVM,
     Run,
+    Exec,
 }
 
 impl OutputType {
     pub fn new(ot: &str) -> Option<OutputType> {
         match ot {
-            "none" => Some(OutputType::None),
+            "check" => Some(OutputType::Check),
             "llvm" => Some(OutputType::LLVM),
             "run" => Some(OutputType::Run),
+            "exec" => Some(OutputType::Exec),
             _ => None
         }
     }

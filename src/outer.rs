@@ -22,12 +22,14 @@ pub fn main_outer(tu: ir::TranslationUnit,
                   options: &CompileOptions)
                   -> io::Result<()> {
     match options.output_type {
-        OutputType::None => Ok(()),
+        OutputType::Check => Ok(()),
         OutputType::LLVM => {
             let mut writer = get_writer(&options.output_path)?;
             codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
         }
-        OutputType::Run => run_with_llvm(tu, input_path, options),
+        OutputType::Run => output_llvm(tu, input_path, options),
+        OutputType::Exec => {}
+        _ => Ok(()),
     }
 }
 
@@ -43,10 +45,10 @@ fn executable_name(path: &str) -> String {
     name_parts.join(".")
 }
 
-fn run_with_llvm(tu: ir::TranslationUnit,
-                 input_path: &str,
-                 options: &CompileOptions)
-                 -> io::Result<()> {
+fn output_llvm(tu: ir::TranslationUnit,
+               input_path: &str,
+               options: &CompileOptions)
+               -> io::Result<()> {
     fn path_to_str(path: &PathBuf) -> &str {
         path.to_str().unwrap()
     }
@@ -63,19 +65,22 @@ fn run_with_llvm(tu: ir::TranslationUnit,
 
     if options.opt &&
        !run_command("opt",
-                    &["-O3", "-S", path_to_str(&llvm_path), "-o", path_to_str(&llvm_path)])?
+                    &["-O3", "-S", path_to_str(&llvm_path), "-o", path_to_str(&llvm_path)])
+                ?
                 .success() {
         panic!("opt fail");
     }
 
     if !run_command("llc",
-                    &["-filetype=obj", path_to_str(&llvm_path), "-o", path_to_str(&obj_path)])?
+                    &["-filetype=obj", path_to_str(&llvm_path), "-o", path_to_str(&obj_path)])
+                ?
                 .success() {
         panic!("llc fail");
     }
 
     if !run_command("clang",
-                    &[path_to_str(&obj_path), "-o", path_to_str(&exec_path)])?
+                    &[path_to_str(&obj_path), "-o", path_to_str(&exec_path)])
+                ?
                 .success() {
         panic!("clang fail");
     }
@@ -87,6 +92,8 @@ fn run_with_llvm(tu: ir::TranslationUnit,
     Ok(())
 }
 
-fn run_command<S: AsRef<std::ffi::OsStr>>(ex: S, args: &[&str]) -> io::Result<std::process::ExitStatus> {
+fn run_command<S: AsRef<std::ffi::OsStr>>(ex: S,
+                                          args: &[&str])
+                                          -> io::Result<std::process::ExitStatus> {
     std::process::Command::new(ex).args(args).status()
 }
