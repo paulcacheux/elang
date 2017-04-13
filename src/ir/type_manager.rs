@@ -44,10 +44,3 @@ impl fmt::Display for FunctionType {
                *self.return_ty)
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub TypeId(usize);
-
-pub struct TypeManager {
-    pub types: Vec<Type>,
-}
