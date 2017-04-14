@@ -26,7 +26,7 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
         match self {
             ParseError::InvalidToken { location } => {
                 Error {
-                    msg: format!("Invalid token.\n"),
+                    msg: "Invalid token.\n".to_string(),
                     lines: get_lines(input, Span(location, location + 1)),
                 }
             }
@@ -38,11 +38,11 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
                     }
                 } else {
                     Error {
-                        msg: format!("Unexpected eof."),
+                        msg: "Unexpected eof.".to_string(),
                         lines: Vec::new(),
                     }
                 };
-                if expected.len() != 0 {
+                if !expected.is_empty() {
                     error
                         .msg
                         .push_str(&format!("Expected one of: {}", expected.join(", ")));
@@ -84,7 +84,7 @@ pub fn print_diagnostic<'a, E: ToError<'a>, P: AsRef<Path>>(input: &'a str, inpu
     }
 }
 
-fn get_lines<'a>(input: &'a str, span: Span) -> Vec<Line> {
+fn get_lines(input: &str, span: Span) -> Vec<Line> {
     let mut arrow = String::with_capacity(input.len());
 
     for (i, c) in input.chars().enumerate() {

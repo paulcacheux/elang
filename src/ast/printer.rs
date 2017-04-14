@@ -100,7 +100,7 @@ impl ASTPrinter {
                          name,
                          ty.as_ref()
                              .map(|ty| ty.inner.to_string())
-                             .unwrap_or(String::from("undefined")));
+                             .unwrap_or_else(|| String::from("undefined")));
                 self.0 += 1;
                 self.print_expression(expr);
                 self.0 -= 1;
@@ -197,7 +197,9 @@ impl ASTPrinter {
         use self::Expression::*;
         match expr.inner {
             Assign(op, ref lhs, ref rhs) => {
-                println!("AssignExpr '{:?}'", op.map(|op| op.to_string()).unwrap_or("=".to_string()));
+                println!("AssignExpr '{:?}'",
+                         op.map(|op| op.to_string())
+                             .unwrap_or_else(|| "=".to_string()));
                 self.0 += 1;
                 self.print_expression(lhs);
                 self.print_expression(rhs);

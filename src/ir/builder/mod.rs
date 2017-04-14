@@ -338,7 +338,7 @@ fn build_statement(fb: &mut FunctionBuilder,
             Ok(())
         }
         ast::Statement::Break => {
-            if let Some((_, id)) = fb.current_loop_info.clone() {
+            if let Some((_, id)) = fb.current_loop_info {
                 fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
@@ -349,7 +349,7 @@ fn build_statement(fb: &mut FunctionBuilder,
             }
         }
         ast::Statement::Continue => {
-            if let Some((id, _)) = fb.current_loop_info.clone() {
+            if let Some((id, _)) = fb.current_loop_info {
                 fb.push_terminator(Some(ir::Terminator::Br(id)));
                 Ok(())
             } else {
@@ -430,19 +430,17 @@ fn build_expression(fb: &mut FunctionBuilder,
                                 span: expr.span,
                             })
                     }
-                } else {
-                    if *sub == rhs_value.ty.clone() {
+                } else if *sub == rhs_value.ty.clone() {
                         fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
                         Ok(rhs_value)
-                    } else {
-                        Err(SemanticError {
-                                kind: SemanticErrorKind::MismatchingTypesAssignment {
-                                    expected: *sub,
-                                    found: rhs_value.ty,
-                                },
-                                span: expr.span,
-                            })
-                    }
+                } else {
+                    Err(SemanticError {
+                            kind: SemanticErrorKind::MismatchingTypesAssignment {
+                                expected: *sub,
+                                found: rhs_value.ty,
+                            },
+                            span: expr.span,
+                        })
                 }
             } else {
                 Err(SemanticError {
@@ -509,7 +507,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 fb.push_statement(ir::Statement::Assign(
                     final_value_rhs.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
@@ -524,7 +522,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                     fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.push_statement(ir::Statement::Assign(
                     final_value_false.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_false, false_value));
 
@@ -533,7 +531,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.push_statement(ir::Statement::Assign(
                     return_lvalue.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
@@ -575,7 +573,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                     fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.push_statement(ir::Statement::Assign(
                     final_value_true.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_true, true_value));
 
@@ -588,7 +586,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
                 fb.push_statement(ir::Statement::Assign(
                     final_value_rhs.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 fb.push_statement(ir::Statement::LValueSet(final_value_rhs, rhs_value));
 
@@ -597,7 +595,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 let return_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ir::Type::Bool)));
                 fb.push_statement(ir::Statement::Assign(
                     return_lvalue.clone(),
-                    ir::Expression::LocalVarLoad(logical_result.clone())
+                    ir::Expression::LocalVarLoad(logical_result)
                 ));
                 let return_value = fb.new_temp_value(ir::Type::Bool);
                 fb.push_statement(ir::Statement::Assign(return_value.clone(),
@@ -819,7 +817,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                 values.push(expr_value);
             }
 
-            if values.len() == 0 {
+            if values.is_empty() {
                 return Err(SemanticError {
                                kind: SemanticErrorKind::EmptyArrayLiteral,
                                span: expr.span,
@@ -963,7 +961,7 @@ fn build_literal(lit: ast::Literal, span: Span) -> Result<ir::Literal, SemanticE
                         kind: SemanticErrorKind::MultipleCharLiteral,
                         span: span,
                     })
-            } else if output.len() == 0 {
+            } else if output.is_empty() {
                 Err(SemanticError {
                         kind: SemanticErrorKind::EmptyCharLiteral,
                         span: span,

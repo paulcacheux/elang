@@ -19,7 +19,7 @@ fn opt_declaration(decl: &mut ir::Declaration) {
 fn opt_basic_blocks(bbs: &mut Vec<ir::BasicBlock>) {
     let opts = [branch_inliner, branch_remover];
 
-    for opt in opts.into_iter() {
+    for opt in &opts {
         opt(bbs);
     }
 }
@@ -35,10 +35,10 @@ fn branch_inliner(bbs: &mut Vec<ir::BasicBlock>) {
 
     for bb in bbs.iter() {
         if let ir::Terminator::Br(mut target_id) = bb.terminator {
-            if bb.stmts.len() == 0 {
+            if bb.stmts.is_empty() {
                 updater(&mut target_id, &directs);
 
-                for (_, target) in directs.iter_mut() {
+                for target in directs.values_mut() {
                     if *target == bb.id {
                         *target = target_id;
                     }
@@ -63,7 +63,7 @@ fn branch_inliner(bbs: &mut Vec<ir::BasicBlock>) {
 fn branch_remover(bbs: &mut Vec<ir::BasicBlock>) {
     let mut succs: HashMap<ir::BasicBlockId, Vec<ir::BasicBlockId>> = HashMap::new();
     for bb in bbs.iter() {
-        let succ_list = succs.entry(bb.id).or_insert(Vec::new());
+        let succ_list = succs.entry(bb.id).or_insert_with(Vec::new);
         match bb.terminator {
             ir::Terminator::Br(id) => {
                 succ_list.push(id);
@@ -80,9 +80,9 @@ fn branch_remover(bbs: &mut Vec<ir::BasicBlock>) {
     opened.push(ir::BasicBlockId(0));
     let mut touched = HashSet::<ir::BasicBlockId>::new();
 
-    while opened.len() != 0 {
+    while !opened.is_empty() {
         let id = opened.pop().unwrap();
-        for succ in succs.get(&id).unwrap() {
+        for succ in &succs[&id] {
             if !touched.contains(succ) {
                 opened.push(*succ);
             }

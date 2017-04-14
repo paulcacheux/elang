@@ -84,16 +84,16 @@ impl<'a> FunctionBuilder<'a> {
 
         // remove check panic
         let mut preds: HashMap<ir::BasicBlockId, HashSet<ir::BasicBlockId>> = HashMap::new();
-        for bb in basic_blocks.iter() {
+        for bb in &basic_blocks {
             if let PanicTerminator::Real(ref terminator) = bb.terminator {
                 match *terminator {
                     ir::Terminator::Br(id) => {
-                        preds.entry(id).or_insert(HashSet::new()).insert(bb.id);
+                        preds.entry(id).or_insert_with(HashSet::new).insert(bb.id);
                     }
                     ir::Terminator::Ret(_) => {}
                     ir::Terminator::BrCond(_, id1, id2) => {
-                        preds.entry(id1).or_insert(HashSet::new()).insert(bb.id);
-                        preds.entry(id2).or_insert(HashSet::new()).insert(bb.id);
+                        preds.entry(id1).or_insert_with(HashSet::new).insert(bb.id);
+                        preds.entry(id2).or_insert_with(HashSet::new).insert(bb.id);
                     }
                 }
             }
@@ -103,7 +103,7 @@ impl<'a> FunctionBuilder<'a> {
         opened.push(basic_blocks[basic_blocks.len() - 1].id);
         let mut panic_preds = HashSet::<ir::BasicBlockId>::new();
 
-        while opened.len() != 0 {
+        while !opened.is_empty() {
             let id = opened.pop().unwrap();
             for pred in preds.get(&id).unwrap_or(&HashSet::new()) {
                 if !panic_preds.contains(pred) {

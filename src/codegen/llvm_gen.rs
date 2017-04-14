@@ -75,7 +75,7 @@ fn gen_declaration<F: Write>(f: &mut F,
                      "\tbr label %bb{}",
                      first_bb_id)?;
 
-            writeln!(f, "{}", function_generator.to_string())?;
+            writeln!(f, "{}", function_generator.into_string())?;
             writeln!(f, "}}")?;
         }
     }
@@ -91,14 +91,14 @@ struct FunctionGenerator<'a> {
 }
 
 impl<'a> FunctionGenerator<'a> {
-    fn to_string(self) -> String {
+    fn into_string(self) -> String {
         format!("{}\n{}",
                 String::from_utf8(self.var_writer).unwrap(),
                 String::from_utf8(self.writer).unwrap())
     }
 
     fn gen_local(&mut self, local: ir::LocalVar) -> io::Result<()> {
-        self.locals.insert(local.id.clone(), local.ty.clone());
+        self.locals.insert(local.id, local.ty.clone());
 
         writeln!(self.var_writer,
                  "\t%local_{} = alloca {}, i32 {}",
@@ -169,7 +169,7 @@ impl<'a> FunctionGenerator<'a> {
     fn gen_expr(&mut self, expr: ir::Expression) -> io::Result<()> {
         match expr {
             ir::Expression::LocalVarLoad(id) => {
-                let ty = self.locals.get(&id).unwrap().clone();
+                let ty = self.locals[&id].clone();
                 write!(self.writer,
                        "getelementptr {0}, {0}* %local_{1}, i64 0",
                        type_to_string(ty),
@@ -367,11 +367,11 @@ impl<'a> FunctionGenerator<'a> {
 
 fn type_to_string(ty: ir::Type) -> String {
     match ty {
-        ir::Type::Unit => format!("void"),
-        ir::Type::Bool => format!("i1"), // cause c you know
-        ir::Type::Int => format!("i32"),
-        ir::Type::Double => format!("double"),
-        ir::Type::Char => format!("i8"),
+        ir::Type::Unit => "void".to_string(),
+        ir::Type::Bool => "i1".to_string(), // cause c you know
+        ir::Type::Int => "i32".to_string(),
+        ir::Type::Double => "double".to_string(),
+        ir::Type::Char => "i8".to_string(),
         ir::Type::LValue(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Ptr(sub) => format!("{}*", type_to_string(*sub)),
         ir::Type::Function(func) => {

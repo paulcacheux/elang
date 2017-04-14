@@ -49,7 +49,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(buffer)
 }
 
-pub fn build_path(id: &String, options: &CompileOptions) -> PathBuf {
+pub fn build_path(id: &str, options: &CompileOptions) -> PathBuf {
     let mut path = options.global_dir.clone();
     path.push(format!("{}.li", id));
     path

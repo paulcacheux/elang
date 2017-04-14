@@ -41,7 +41,7 @@ impl SymbolTable {
         for scope in self.locals.iter().rev() {
             if let Some(&(ref id, ref ty)) = scope.get(name) {
                 return Some((ir::Type::LValue(Box::new(ty.clone())),
-                             ir::Expression::LocalVarLoad(id.clone())));
+                             ir::Expression::LocalVarLoad(*id)));
             }
         }
         if let Some(ty) = self.globals.get(name) {
