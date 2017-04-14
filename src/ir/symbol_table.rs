@@ -3,15 +3,40 @@ use std::collections::HashMap;
 use ir;
 
 #[derive(Debug, Clone)]
-pub struct SymbolTable {
+pub struct GlobalTable {
     globals: HashMap<String, ir::Type>,
+}
+
+impl GlobalTable {
+    pub fn new() -> Self {
+        GlobalTable {
+            globals: HashMap::new(),
+        }
+    }
+
+    pub fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
+        self.globals.insert(name, ty).is_none()
+    }
+
+    pub fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
+        if let Some(ty) = self.globals.get(name) {
+            Some((ty.clone(), ir::Expression::GlobalLoad(name.clone())))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SymbolTable<'a> {
+    globals: &'a GlobalTable,
     locals: Vec<HashMap<String, (ir::LocalVarId, ir::Type)>>,
 }
 
-impl SymbolTable {
-    pub fn new() -> Self {
+impl<'a> SymbolTable<'a> {
+    pub fn new(globals: &'a GlobalTable) -> Self {
         SymbolTable {
-            globals: HashMap::new(),
+            globals: globals,
             locals: Vec::new(),
         }
     }
@@ -33,10 +58,6 @@ impl SymbolTable {
             .is_none()
     }
 
-    pub fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
-        self.globals.insert(name, ty).is_none()
-    }
-
     pub fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
         for scope in self.locals.iter().rev() {
             if let Some(&(ref id, ref ty)) = scope.get(name) {
@@ -44,10 +65,6 @@ impl SymbolTable {
                              ir::Expression::LocalVarLoad(*id)));
             }
         }
-        if let Some(ty) = self.globals.get(name) {
-            Some((ty.clone(), ir::Expression::GlobalLoad(name.clone())))
-        } else {
-            None
-        }
+        self.globals.get_var(name)
     }
 }

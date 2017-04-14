@@ -3,7 +3,7 @@ use ast;
 use span::{Spanned, Span};
 use pipeline;
 
-use ir::SymbolTable;
+use ir::GlobalTable;
 use semantic_error::{SemanticError, SemanticErrorKind};
 
 mod typecheck_defs;
@@ -11,25 +11,25 @@ mod function_builder;
 use self::function_builder::FunctionBuilder;
 
 pub fn build_translation_unit(tu: ast::TranslationUnit,
-                              st: &mut SymbolTable,
+                              globals_table: &mut GlobalTable,
                               options: &pipeline::CompileOptions)
                               -> Result<ir::TranslationUnit, SemanticError> {
     let mut declarations = Vec::new();
 
     for import in tu.imports {
         let path = pipeline::build_path(&import, options);
-        let imported_tu = pipeline::process_path(path, options, st);
+        let imported_tu = pipeline::process_path(path, options, globals_table);
         declarations.extend(imported_tu.declarations);
     }
 
     let mut predeclarations = Vec::with_capacity(tu.declarations.len());
     for decl in tu.declarations {
-        predeclarations.push(register_declaration(decl, st)?);
+        predeclarations.push(register_declaration(decl, globals_table)?);
     }
 
     declarations.reserve(predeclarations.len());
     for predecl in predeclarations {
-        declarations.push(build_predeclaration(predecl, st)?);
+        declarations.push(build_predeclaration(predecl, globals_table)?);
     }
 
     Ok(ir::TranslationUnit { declarations: declarations })
@@ -37,22 +37,26 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PreDeclaration {
-    ExternFunction {
-        name: String,
-        ty: ir::FunctionType,
-    },
+    ExternFunction { name: String, ty: ir::FunctionType },
     Function {
         name: String,
         param_names: Vec<Spanned<String>>,
         ty: ir::FunctionType,
         stmt: Spanned<ast::CompoundStatement>,
-        span: Span
+        span: Span,
     },
 }
 
-fn register_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut SymbolTable) -> Result<PreDeclaration, SemanticError> {
+fn register_declaration(decl: Spanned<ast::Declaration>,
+                        globals_table: &mut GlobalTable)
+                        -> Result<PreDeclaration, SemanticError> {
     match decl.inner {
-        ast::Declaration::ExternFunction { name, params, variadic, return_ty } => {
+        ast::Declaration::ExternFunction {
+            name,
+            params,
+            variadic,
+            return_ty,
+        } => {
             let return_ty = build_type(return_ty)?;
 
             let mut param_types = Vec::with_capacity(params.len());
@@ -66,17 +70,14 @@ fn register_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut Symb
                 variadic: variadic,
             };
 
-            if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
+            if !globals_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SemanticError {
                                kind: SemanticErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
                            });
             }
 
-            Ok(PreDeclaration::ExternFunction {
-                name: name,
-                ty: ty,
-            })
+            Ok(PreDeclaration::ExternFunction { name: name, ty: ty })
         }
         ast::Declaration::Function {
             name,
@@ -99,7 +100,7 @@ fn register_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut Symb
                 variadic: false,
             };
 
-            if !symbol_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
+            if !globals_table.register_global(name.clone(), ir::Type::Function(ty.clone())) {
                 return Err(SemanticError {
                                kind: SemanticErrorKind::FunctionAlreadyDefined { name: name },
                                span: decl.span,
@@ -107,24 +108,21 @@ fn register_declaration(decl: Spanned<ast::Declaration>, symbol_table: &mut Symb
             }
 
             Ok(PreDeclaration::Function {
-                name: name,
-                param_names: param_names,
-                ty: ty,
-                stmt: stmt,
-                span: decl.span
-            })
+                   name: name,
+                   param_names: param_names,
+                   ty: ty,
+                   stmt: stmt,
+                   span: decl.span,
+               })
         }
     }
 }
 
 fn build_predeclaration(predecl: PreDeclaration,
-                     symbol_table: &mut SymbolTable)
-                     -> Result<ir::Declaration, SemanticError> {
+                        globals_table: &GlobalTable)
+                        -> Result<ir::Declaration, SemanticError> {
     match predecl {
-        PreDeclaration::ExternFunction {
-            name,
-            ty,
-        } => {
+        PreDeclaration::ExternFunction { name, ty } => {
             Ok(ir::Declaration::ExternFunction { name: name, ty: ty })
         }
         PreDeclaration::Function {
@@ -134,7 +132,7 @@ fn build_predeclaration(predecl: PreDeclaration,
             stmt,
             span,
         } => {
-            let mut function_builder = FunctionBuilder::new(name, ty.clone(), symbol_table);
+            let mut function_builder = FunctionBuilder::new(name, ty.clone(), globals_table);
             function_builder.symbol_table.start_local_scope();
             for (index, (name, ty)) in param_names.into_iter().zip(ty.params_ty).enumerate() {
                 if !function_builder.register_param(name.inner.clone(), ty, Some(index)) {
@@ -431,8 +429,8 @@ fn build_expression(fb: &mut FunctionBuilder,
                             })
                     }
                 } else if *sub == rhs_value.ty.clone() {
-                        fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
-                        Ok(rhs_value)
+                    fb.push_statement(ir::Statement::LValueSet(lhs_value, rhs_value.clone()));
+                    Ok(rhs_value)
                 } else {
                     Err(SemanticError {
                             kind: SemanticErrorKind::MismatchingTypesAssignment {

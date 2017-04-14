@@ -4,7 +4,7 @@ pub mod opt;
 pub mod symbol_table;
 pub mod ty;
 
-pub use self::symbol_table::SymbolTable;
+pub use self::symbol_table::{SymbolTable, GlobalTable};
 pub use self::ty::{Type, FunctionType};
 
 #[derive(Debug, Clone)]

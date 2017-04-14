@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use ir;
-use ir::SymbolTable;
+use ir::{GlobalTable, SymbolTable};
 use semantic_error::{SemanticError, SemanticErrorKind};
 use span::Span;
 
@@ -15,7 +15,7 @@ enum Item {
 pub struct FunctionBuilder<'a> {
     pub name: String,
     pub ty: ir::FunctionType,
-    pub symbol_table: &'a mut SymbolTable,
+    pub symbol_table: SymbolTable<'a>,
     pub current_loop_info: Option<(ir::BasicBlockId, ir::BasicBlockId)>, // (continue, break)
     locals: Vec<ir::LocalVar>,
     items: Vec<Item>,
@@ -25,11 +25,11 @@ pub struct FunctionBuilder<'a> {
 }
 
 impl<'a> FunctionBuilder<'a> {
-    pub fn new(name: String, ty: ir::FunctionType, symbol_table: &'a mut SymbolTable) -> Self {
+    pub fn new(name: String, ty: ir::FunctionType, globals_table: &'a GlobalTable) -> Self {
         FunctionBuilder {
             name: name,
             ty: ty,
-            symbol_table: symbol_table,
+            symbol_table: SymbolTable::new(globals_table),
             current_loop_info: None,
             locals: Vec::new(),
             items: Vec::new(),

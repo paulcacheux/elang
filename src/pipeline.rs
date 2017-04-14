@@ -10,7 +10,7 @@ use ast;
 use diagnostics;
 use ir;
 
-use ir::SymbolTable;
+use ir::GlobalTable;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OutputType {
@@ -58,8 +58,8 @@ pub fn build_path(id: &str, options: &CompileOptions) -> PathBuf {
 pub fn process_main_path<P: AsRef<Path>>(input_path: P,
                                          options: &CompileOptions)
                                          -> ir::TranslationUnit {
-    let mut symbol_table = SymbolTable::new();
-    let mut tu = process_path(input_path, options, &mut symbol_table);
+    let mut globals_table = GlobalTable::new();
+    let mut tu = process_path(input_path, options, &mut globals_table);
 
     if options.opt {
         ir::opt::opt_translation_unit(&mut tu);
@@ -74,7 +74,7 @@ pub fn process_main_path<P: AsRef<Path>>(input_path: P,
 
 pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     options: &CompileOptions,
-                                    symbol_table: &mut SymbolTable)
+                                    globals_table: &mut GlobalTable)
                                     -> ir::TranslationUnit {
     let input = read_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
@@ -90,7 +90,7 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
         ast::printer::print_ast(&ast_tu);
     }
 
-    match ir::builder::build_translation_unit(ast_tu, symbol_table, options) {
+    match ir::builder::build_translation_unit(ast_tu, globals_table, options) {
         Ok(tu) => tu,
         Err(err) => {
             diagnostics::print_diagnostic(&input, input_path, err);
