@@ -2,10 +2,10 @@ pub mod builder;
 pub mod printer;
 pub mod opt;
 pub mod symbol_table;
-pub mod type_manager;
+pub mod ty;
 
 pub use self::symbol_table::SymbolTable;
-pub use self::type_manager::{Type, FunctionType};
+pub use self::ty::{Type, FunctionType};
 
 #[derive(Debug, Clone)]
 pub struct TranslationUnit {

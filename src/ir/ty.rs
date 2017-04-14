@@ -1,4 +1,5 @@
 use std::fmt;
+
 use itertools::Itertools;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
