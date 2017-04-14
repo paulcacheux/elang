@@ -3,6 +3,7 @@ extern crate itertools;
 extern crate unicode_xid;
 extern crate lalrpop_util;
 extern crate tempdir;
+extern crate rayon;
 
 use clap::{Arg, App};
 use std::path::PathBuf;

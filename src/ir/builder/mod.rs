@@ -10,6 +10,8 @@ mod typecheck_defs;
 mod function_builder;
 use self::function_builder::FunctionBuilder;
 
+use rayon::prelude::*;
+
 pub fn build_translation_unit(tu: ast::TranslationUnit,
                               globals_table: &mut GlobalTable,
                               options: &pipeline::CompileOptions)
@@ -28,8 +30,12 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
     }
 
     declarations.reserve(predeclarations.len());
-    for predecl in predeclarations {
-        declarations.push(build_predeclaration(predecl, globals_table)?);
+    let rdecls: Vec<_> = predeclarations
+        .into_par_iter()
+        .map(|predecl| build_predeclaration(predecl, globals_table))
+        .collect();
+    for rdecl in rdecls {
+        declarations.push(rdecl?);
     }
 
     Ok(ir::TranslationUnit { declarations: declarations })
