@@ -57,7 +57,7 @@ fn main() {
         print_ast: matches.is_present("ast"),
         print_ir: matches.is_present("ir"),
         opt: matches.is_present("opt"),
-        output_type: OutputType::new(matches.value_of("output_type").unwrap_or("none")).unwrap(),
+        output_type: OutputType::new(matches.value_of("output_type").unwrap_or("check")).unwrap(),
         output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 

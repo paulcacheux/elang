@@ -12,6 +12,7 @@ pub enum Type {
     LValue(Box<Type>),
     Ptr(Box<Type>),
     Function(FunctionType),
+    Struct(StructType),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +20,11 @@ pub struct FunctionType {
     pub return_ty: Box<Type>,
     pub params_ty: Vec<Type>,
     pub variadic: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructType {
+    pub fields_ty: Vec<(String, Type)>,
 }
 
 impl fmt::Display for Type {
@@ -32,6 +38,7 @@ impl fmt::Display for Type {
             Type::LValue(ref sub) => write!(f, "&{}", *sub),
             Type::Ptr(ref sub) => write!(f, "*{}", *sub),
             Type::Function(ref func) => write!(f, "{}", func),
+            Type::Struct(ref st) => write!(f, "{}", st),
         }
     }
 }
@@ -43,5 +50,16 @@ impl fmt::Display for FunctionType {
                self.params_ty.iter().join(", "),
                if self.variadic { ", .." } else { "" },
                *self.return_ty)
+    }
+}
+
+impl fmt::Display for StructType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f,
+               "struct{{ {} }}",
+               self.fields_ty
+                   .iter()
+                   .map(|&(ref name, ref ty)| format!("{}:{}", name, ty))
+                   .join(", "))
     }
 }

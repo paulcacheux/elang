@@ -14,6 +14,8 @@ pub enum SemanticErrorKind {
     FunctionAlreadyDefined { name: String },
     ParameterAlreadyDefined { name: String },
     LocalVariableAlreadyDefined { name: String },
+    FieldAlreadyDefined { name: String },
+    TypeAlreadyDefined { name: String },
     MismatchingTypesAssignment { expected: Type, found: Type },
     MismatchingTypesCondition { found: Type },
     MismatchingTypesReturn { expected: Type, found: Type },
@@ -52,6 +54,12 @@ impl fmt::Display for SemanticErrorKind {
             }
             LocalVariableAlreadyDefined { ref name } => {
                 write!(f, "'{}' local variable is already defined.", name)
+            }
+            FieldAlreadyDefined { ref name } => {
+                write!(f, "'{}' field is already defined in this struct.", name)
+            }
+            TypeAlreadyDefined { ref name } => {
+                write!(f, "'{}' is already defined as a type.", name)
             }
             MismatchingTypesAssignment { ref expected, ref found } => {
                 write!(f,

@@ -67,6 +67,19 @@ impl ASTPrinter {
                 self.print_compound_statement(stmt);
                 self.0 -= 1;
             }
+            Struct {
+                ref name,
+                ref fields,
+            } => {
+                println!("StructField '{}'", name);
+                self.0 += 1;
+                for field in fields {
+                    self.print_tab();
+                    self.print_span(&field.0.span);
+                    println!("FieldDecl '{}':'{}'", field.0.inner, field.1.inner);
+                }
+                self.0 -= 1;
+            }
         }
     }
 

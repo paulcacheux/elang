@@ -16,6 +16,7 @@ Import: String = {
 Declaration: Spanned<Declaration> = {
     Spanned<ExternFuncDecl>,
     Spanned<FuncDecl>,
+    Spanned<StructDecl>,
 };
 
 ExternFuncDecl: Declaration = {
@@ -40,6 +41,14 @@ FuncDecl: Declaration = {
 
 ParamDecl: (Spanned<String>, Spanned<ParseType>) = {
     <id: Spanned<Identifier>> ":" <ty: Spanned<Type>> => { (id, ty) }
+};
+
+StructDecl: Declaration = {
+    "struct" <id:Identifier> "{" <fields:Comma<ParamDecl>> "}"
+    => Declaration::Struct {
+        name: id,
+        fields: fields
+    }
 };
 
 Statement: Spanned<Statement> = {
@@ -297,6 +306,7 @@ extern {
 
     enum lexer::Token {
         "import" => lexer::Token::ImportKeyword,
+        "struct" => lexer::Token::StructKeyword,
         "extern" => lexer::Token::ExternKeyword,
         "fn" => lexer::Token::FnKeyword,
         "let" => lexer::Token::LetKeyword,

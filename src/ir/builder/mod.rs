@@ -26,7 +26,9 @@ pub fn build_translation_unit(tu: ast::TranslationUnit,
 
     let mut predeclarations = Vec::with_capacity(tu.declarations.len());
     for decl in tu.declarations {
-        predeclarations.push(register_declaration(decl, globals_table)?);
+        if let Some(predecl) = register_declaration(decl, globals_table)? {
+            predeclarations.push(predecl);
+        }
     }
 
     declarations.reserve(predeclarations.len());
@@ -55,7 +57,7 @@ pub enum PreDeclaration {
 
 fn register_declaration(decl: Spanned<ast::Declaration>,
                         globals_table: &mut GlobalTable)
-                        -> Result<PreDeclaration, SemanticError> {
+                        -> Result<Option<PreDeclaration>, SemanticError> {
     match decl.inner {
         ast::Declaration::ExternFunction {
             name,
@@ -63,11 +65,11 @@ fn register_declaration(decl: Spanned<ast::Declaration>,
             variadic,
             return_ty,
         } => {
-            let return_ty = build_type(return_ty)?;
+            let return_ty = build_type(return_ty, globals_table)?;
 
             let mut param_types = Vec::with_capacity(params.len());
             for ty in params {
-                param_types.push(build_type(ty)?);
+                param_types.push(build_type(ty, globals_table)?);
             }
 
             let ty = ir::FunctionType {
@@ -83,7 +85,7 @@ fn register_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
-            Ok(PreDeclaration::ExternFunction { name: name, ty: ty })
+            Ok(Some(PreDeclaration::ExternFunction { name: name, ty: ty }))
         }
         ast::Declaration::Function {
             name,
@@ -91,13 +93,13 @@ fn register_declaration(decl: Spanned<ast::Declaration>,
             return_ty,
             stmt,
         } => {
-            let return_ty = build_type(return_ty)?;
+            let return_ty = build_type(return_ty, globals_table)?;
 
             let mut param_names = Vec::with_capacity(params.len());
             let mut param_types = Vec::with_capacity(params.len());
             for (name, ty) in params {
                 param_names.push(name);
-                param_types.push(build_type(ty)?);
+                param_types.push(build_type(ty, globals_table)?);
             }
 
             let ty = ir::FunctionType {
@@ -113,13 +115,41 @@ fn register_declaration(decl: Spanned<ast::Declaration>,
                            });
             }
 
-            Ok(PreDeclaration::Function {
-                   name: name,
-                   param_names: param_names,
-                   ty: ty,
-                   stmt: stmt,
-                   span: decl.span,
-               })
+            Ok(Some(PreDeclaration::Function {
+                        name: name,
+                        param_names: param_names,
+                        ty: ty,
+                        stmt: stmt,
+                        span: decl.span,
+                    }))
+        }
+        ast::Declaration::Struct { name, fields } => {
+            let mut field_names = Vec::with_capacity(fields.len());
+            let mut final_fields = Vec::with_capacity(fields.len());
+            for (name, ty) in fields {
+                let ty = build_type(ty, globals_table)?;
+                if field_names.contains(&name.inner) {
+                    return Err(SemanticError {
+                                   kind: SemanticErrorKind::FieldAlreadyDefined {
+                                       name: name.inner,
+                                   },
+                                   span: name.span,
+                               });
+                }
+                final_fields.push((name.inner.clone(), ty));
+                field_names.push(name.inner);
+            }
+
+            let struct_ty = ir::Type::Struct(ir::StructType { fields_ty: final_fields });
+
+            if globals_table.register_ty(name.clone(), struct_ty) {
+                Ok(None)
+            } else {
+                Err(SemanticError {
+                        kind: SemanticErrorKind::TypeAlreadyDefined { name: name },
+                        span: decl.span,
+                    })
+            }
         }
     }
 }
@@ -194,7 +224,7 @@ fn build_statement(fb: &mut FunctionBuilder,
             let expr_value = build_lvalue_to_rvalue(fb, expr_value);
 
             let ty = if let Some(ty) = ty {
-                build_type(ty)?
+                build_type(ty, fb.symbol_table.globals)?
             } else {
                 expr_value.ty.clone()
             };
@@ -722,7 +752,7 @@ fn build_expression(fb: &mut FunctionBuilder,
         ast::Expression::Cast(sub_expr, target_ty) => {
             let expr_value = build_expression(fb, *sub_expr)?;
             let expr_value = build_lvalue_to_rvalue(fb, expr_value);
-            let target_ty = build_type(target_ty)?;
+            let target_ty = build_type(target_ty, fb.symbol_table.globals)?;
 
             if let Some(code) = typecheck_defs::cast_tyck(&expr_value.ty, &target_ty) {
                 let value = fb.new_temp_value(target_ty);
@@ -988,23 +1018,24 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
     }
 }
 
-fn build_type(parse_ty: Spanned<ast::ParseType>) -> Result<ir::Type, SemanticError> {
+fn build_type(parse_ty: Spanned<ast::ParseType>,
+              globals_table: &GlobalTable)
+              -> Result<ir::Type, SemanticError> {
     match parse_ty.inner {
         ast::ParseType::Unit => Ok(ir::Type::Unit),
-        ast::ParseType::Ptr(sub) => Ok(ir::Type::Ptr(Box::new(build_type(*sub)?))),
+        ast::ParseType::Ptr(sub) => Ok(ir::Type::Ptr(Box::new(build_type(*sub, globals_table)?))),
         ast::ParseType::Lit(lit) => {
-            match lit.as_str() {
-                "int" => Ok(ir::Type::Int),
-                "double" => Ok(ir::Type::Double),
-                "bool" => Ok(ir::Type::Bool),
-                "char" => Ok(ir::Type::Char),
-                other => {
-                    Err(SemanticError {
-                            kind: SemanticErrorKind::UndefinedType { name: other.to_string() },
-                            span: parse_ty.span,
-                        })
-                }
-            }
+            let span = parse_ty.span;
+            globals_table
+                .get_type(&lit)
+                .ok_or_else(|| {
+                                SemanticError {
+                                    kind: SemanticErrorKind::UndefinedType {
+                                        name: lit,
+                                    },
+                                    span: span,
+                                }
+                            })
         }
     }
 }

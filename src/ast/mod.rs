@@ -23,6 +23,10 @@ pub enum Declaration {
         return_ty: Spanned<ParseType>,
         stmt: Spanned<CompoundStatement>,
     },
+    Struct {
+        name: String,
+        fields: Vec<(Spanned<String>, Spanned<ParseType>)>,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

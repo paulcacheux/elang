@@ -1,0 +1,12 @@
+struct ex {
+    a: int,
+    b: double,
+    c: char,
+    d: bool,
+    e: *char,
+    f: ***int,
+}
+
+fn main() -> int {
+    return 0;
+}

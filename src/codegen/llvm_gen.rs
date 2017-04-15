@@ -383,5 +383,6 @@ fn type_to_string(ty: ir::Type) -> String {
                         .join(", "),
                     if func.variadic { ", ..." } else { "" })
         }
+        ir::Type::Struct(_) => unimplemented!()
     }
 }

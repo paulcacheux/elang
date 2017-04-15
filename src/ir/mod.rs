@@ -5,7 +5,7 @@ pub mod symbol_table;
 pub mod ty;
 
 pub use self::symbol_table::{SymbolTable, GlobalTable};
-pub use self::ty::{Type, FunctionType};
+pub use self::ty::{Type, FunctionType, StructType};
 
 #[derive(Debug, Clone)]
 pub struct TranslationUnit {

@@ -4,14 +4,23 @@ use ir;
 
 #[derive(Debug, Clone)]
 pub struct GlobalTable {
+    types: HashMap<String, ir::Type>,
     globals: HashMap<String, ir::Type>,
 }
 
 impl GlobalTable {
     pub fn new() -> Self {
-        GlobalTable {
+        let mut g = GlobalTable {
+            types: HashMap::new(),
             globals: HashMap::new(),
-        }
+        };
+
+        g.register_ty("int".to_string(), ir::Type::Int);
+        g.register_ty("bool".to_string(), ir::Type::Bool);
+        g.register_ty("double".to_string(), ir::Type::Double);
+        g.register_ty("char".to_string(), ir::Type::Char);
+
+        g
     }
 
     pub fn register_global(&mut self, name: String, ty: ir::Type) -> bool {
@@ -25,11 +34,19 @@ impl GlobalTable {
             None
         }
     }
+
+    pub fn register_ty(&mut self, name: String, ty: ir::Type) -> bool {
+        self.types.insert(name, ty).is_none()
+    }
+
+    pub fn get_type(&self, name: &String) -> Option<ir::Type> {
+        self.types.get(name).cloned()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolTable<'a> {
-    globals: &'a GlobalTable,
+    pub globals: &'a GlobalTable,
     locals: Vec<HashMap<String, (ir::LocalVarId, ir::Type)>>,
 }
 
