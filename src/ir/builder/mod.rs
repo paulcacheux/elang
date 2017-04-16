@@ -770,6 +770,7 @@ fn build_expression(fb: &mut FunctionBuilder,
                     })
             }
         }
+        ast::Expression::FieldAccess(_, _) => unimplemented!(),
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
             if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {

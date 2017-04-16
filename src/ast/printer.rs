@@ -253,6 +253,12 @@ impl ASTPrinter {
                 self.print_expression(expr);
                 self.0 -= 1;
             }
+            FieldAccess(ref expr, ref field) => {
+                println!("FieldAccess '{}'", field.inner);
+                self.0 +=  1;
+                self.print_expression(expr);
+                self.0 -= 1;
+            }
             Paren(ref expr) => {
                 println!("ParenExpr");
                 self.0 += 1;

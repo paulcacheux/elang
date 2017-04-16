@@ -8,5 +8,6 @@ struct ex {
 }
 
 fn main() -> int {
+    a.test;
     return 0;
 }

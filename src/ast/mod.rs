@@ -71,6 +71,7 @@ pub enum Expression {
     UnOp(UnOpCode, Box<Spanned<Expression>>),
     FuncCall(Box<Spanned<Expression>>, Vec<Spanned<Expression>>),
     Cast(Box<Spanned<Expression>>, Spanned<ParseType>),
+    FieldAccess(Box<Spanned<Expression>>, Spanned<String>),
     Paren(Box<Spanned<Expression>>),
     Identifier(String),
     Literal(Literal),
