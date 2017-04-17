@@ -191,16 +191,7 @@ impl<'a> FunctionBuilder<'a> {
     }
 
     pub fn register_local_logical(&mut self) -> ir::LocalVarId {
-        let id = ir::LocalVarId(self.local_counter);
-        self.locals
-            .push(ir::LocalVar {
-                      id: id,
-                      ty: ir::Type::Bool,
-                      size: 1,
-                      param_index: None,
-                  });
-        self.local_counter += 1;
-        id
+        self.register_local_unnamed(ir::Type::Bool)
     }
 
     pub fn register_local_array(&mut self, ty: ir::Type, size: usize) -> ir::LocalVarId {
