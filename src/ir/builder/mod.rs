@@ -926,6 +926,7 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             Ok(array_value)
         }
+        ast::Expression::StructLiteral(_) => unimplemented!()
     }
 }
 

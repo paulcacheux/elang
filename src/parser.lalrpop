@@ -87,7 +87,7 @@ LoopStmt: Statement = {
 };
 
 ForStmt: Statement = {
-    "for" <name:Identifier> "=" <init:Expr> ";" <cond:Expr> ";" <step:Expr> <stmt:Spanned<CompoundStmt>> => Statement::For {
+    "for" <name:Identifier> "=" <init:Expr> ";" <cond:Expr> ";" <step:ExprNoStruct> <stmt:Spanned<CompoundStmt>> => Statement::For {
         name: name,
         init_expr: init,
         cond_expr: cond,
@@ -97,14 +97,14 @@ ForStmt: Statement = {
 };
 
 WhileStmt: Statement = {
-    "while" <expr:Expr> <stmt:Spanned<CompoundStmt>> => Statement::While {
+    "while" <expr:ExprNoStruct> <stmt:Spanned<CompoundStmt>> => Statement::While {
         cond: expr,
         stmt: stmt
     }
 };
 
 IfStmt: Statement = {
-    "if" <if_cond:Expr> <if_stmt:Spanned<CompoundStmt>> <elseifs:ElseIfPart*> <else_part:ElsePart?> => {
+    "if" <if_cond:ExprNoStruct> <if_stmt:Spanned<CompoundStmt>> <elseifs:ElseIfPart*> <else_part:ElsePart?> => {
         Statement::If {
             if_branch: (if_cond, if_stmt),
             elseif_branches: elseifs,
@@ -114,7 +114,7 @@ IfStmt: Statement = {
 };
 
 ElseIfPart: (Spanned<Expression>, Spanned<CompoundStatement>) = {
-    "else" "if" <Expr> <Spanned<CompoundStmt>>
+    "else" "if" <ExprNoStruct> <Spanned<CompoundStmt>>
 };
 
 ElsePart: Spanned<CompoundStatement> = {
@@ -137,43 +137,129 @@ ExprStmt: Statement = {
     <Expr> ";" => Statement::Expression { expr: <> }
 };
 
-Expr = AssignExpr;
+Expr = ExprRestriced<"S">;
+ExprNoStruct = ExprRestriced<"">;
 
-AssignExpr: Spanned<Expression> = {
-    <l:@L> <lhs:LogOrExpr> <op:AssignOp> <rhs:AssignExpr> <r:@R> => {
+ExprRestriced<S> = AssignExpr<S>;
+
+AssignExpr<S>: Spanned<Expression> = {
+    <l:@L> <lhs:LogOrExpr<S>> <op:AssignOp> <rhs:AssignExpr<S>> <r:@R> => {
         Spanned::new(
             Expression::Assign(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
-    LogOrExpr
+    LogOrExpr<S>
 };
 
-LogOrExpr = Tier<LogicalOrOp, LogAndExpr>;
-LogAndExpr = Tier<LogicalAndOp, EqExpr>;
+LogOrExpr<S> = Tier<LogicalOrOp, LogAndExpr<S>>;
+LogAndExpr<S> = Tier<LogicalAndOp, EqExpr<S>>;
 
-EqExpr: Spanned<Expression> = {
-    <l:@L> <lhs:CompExpr> <op:EqOp> <rhs:CompExpr> <r:@R> => {
+EqExpr<S>: Spanned<Expression> = {
+    <l:@L> <lhs:CompExpr<S>> <op:EqOp> <rhs:CompExpr<S>> <r:@R> => {
         Spanned::new(
             Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
-    CompExpr
+    CompExpr<S>
 };
 
-CompExpr: Spanned<Expression> = {
-    <l:@L> <lhs:SumExpr> <op:CompOp> <rhs:SumExpr> <r:@R> => {
+CompExpr<S>: Spanned<Expression> = {
+    <l:@L> <lhs:SumExpr<S>> <op:CompOp> <rhs:SumExpr<S>> <r:@R> => {
         Spanned::new(
             Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
             Span(l, r)
         )
     },
-    SumExpr
+    SumExpr<S>
 };
 
-SumExpr = Tier<SumOp, FactorExpr>;
-FactorExpr = Tier<FactorOp, CastExpr>;
+SumExpr<S> = Tier<SumOp, FactorExpr<S>>;
+FactorExpr<S> = Tier<FactorOp, CastExpr<S>>;
+
+CastExpr<S>: Spanned<Expression> = {
+    <l:@L> <expr:UnOpExpr<S>> "as" <ty:Spanned<Type>> <r:@R> => {
+        Spanned::new(
+            Expression::Cast(Box::new(expr), ty),
+            Span(l, r)
+        )
+    },
+    UnOpExpr<S>
+};
+
+UnOpExpr<S>: Spanned<Expression> = {
+    <l:@L> <op:UnOp> <expr:UnOpExpr<S>> <r:@R> => {
+        Spanned::new(
+            Expression::UnOp(op, Box::new(expr)),
+            Span(l, r)
+        )
+    },
+    SubscriptOrCallExpr<S>
+};
+
+SubscriptOrCallExpr<S>: Spanned<Expression> = {
+    <l:@L> <lhs:SubscriptOrCallExpr<S>> "[" <rhs:Expr> "]" <r:@R> => {
+        Spanned::new(
+            Expression::Subscript(Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    <l:@L> <lhs:SubscriptOrCallExpr<S>> "(" <rhs:Comma<Expr>> ")" <r:@R> => {
+        Spanned::new(
+            Expression::FuncCall(Box::new(lhs), rhs),
+            Span(l, r)
+        )
+    },
+    <l:@L> <lhs:SubscriptOrCallExpr<S>> "." <rhs:Spanned<Identifier>> <r:@R> => {
+        Spanned::new(
+            Expression::FieldAccess(Box::new(lhs), rhs),
+            Span(l, r)
+        )
+    },
+    Spanned<Term<S>>
+};
+
+Term<S>: Expression = {
+    DoubleLiteral => Expression::Literal(Literal::Double(<>)),
+    IntLiteral => Expression::Literal(Literal::Int(<>)),
+    BoolLiteral => Expression::Literal(Literal::Bool(<>)),
+    CharLiteral => Expression::Literal(Literal::Char(<>)),
+    StringLiteral => Expression::StringLiteral(<>),
+    "(" ")" => Expression::Literal(Literal::Unit),
+    Identifier => Expression::Identifier(<>),
+    "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
+    ArrayLiteral,
+    StructLiteralOrId if S != "",
+};
+
+ArrayLiteral: Expression = {
+    "[" <Comma<Expr>> "]" => Expression::ArrayFullLiteral(<>),
+    "[" <expr:Expr> ";" <size:IntLiteral> "]" => Expression::ArrayDefaultLiteral(Box::new(expr), size),
+};
+
+StructLiteralOrId: Expression = {
+    <id:Identifier> "{" <fields:Comma<Spanned<StructField>>> "}" => {
+        Expression::StructLiteral(StructLiteral {
+            name: id,
+            fields: fields,
+        })
+    }
+};
+
+StructField: (String, Spanned<Expression>) = {
+    <field:Identifier> ":" <expr:Expr> => (field, expr)
+};
+
+Tier<Op, NextTier>: Spanned<Expression> = {
+    <l:@L> <lhs:Tier<Op, NextTier>> <op:Op> <rhs:NextTier> <r:@R> => {
+        Spanned::new(
+            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
+            Span(l, r)
+        )
+    },
+    NextTier
+};
 
 AssignOp: Option<BinOpCode> = {
     "=" => None,
@@ -213,75 +299,6 @@ FactorOp: BinOpCode = {
     "*" => BinOpCode::Times,
     "/" => BinOpCode::Divide,
     "%" => BinOpCode::Mod,
-};
-
-Tier<Op, NextTier>: Spanned<Expression> = {
-    <l:@L> <lhs:Tier<Op, NextTier>> <op:Op> <rhs:NextTier> <r:@R> => {
-        Spanned::new(
-            Expression::BinOp(op, Box::new(lhs), Box::new(rhs)),
-            Span(l, r)
-        )
-    },
-    NextTier
-};
-
-CastExpr: Spanned<Expression> = {
-    <l:@L> <expr:UnOpExpr> "as" <ty:Spanned<Type>> <r:@R> => {
-        Spanned::new(
-            Expression::Cast(Box::new(expr), ty),
-            Span(l, r)
-        )
-    },
-    UnOpExpr
-};
-
-UnOpExpr: Spanned<Expression> = {
-    <l:@L> <op:UnOp> <expr:UnOpExpr> <r:@R> => {
-        Spanned::new(
-            Expression::UnOp(op, Box::new(expr)),
-            Span(l, r)
-        )
-    },
-    SubscriptOrCallExpr
-};
-
-SubscriptOrCallExpr: Spanned<Expression> = {
-    <l:@L> <lhs:SubscriptOrCallExpr> "[" <rhs:Expr> "]" <r:@R> => {
-        Spanned::new(
-            Expression::Subscript(Box::new(lhs), Box::new(rhs)),
-            Span(l, r)
-        )
-    },
-    <l:@L> <lhs:SubscriptOrCallExpr> "(" <rhs:Comma<Expr>> ")" <r:@R> => {
-        Spanned::new(
-            Expression::FuncCall(Box::new(lhs), rhs),
-            Span(l, r)
-        )
-    },
-    <l:@L> <lhs:SubscriptOrCallExpr> "." <rhs:Spanned<Identifier>> <r:@R> => {
-        Spanned::new(
-            Expression::FieldAccess(Box::new(lhs), rhs),
-            Span(l, r)
-        )
-    },
-    Spanned<Term>
-};
-
-Term: Expression = {
-    DoubleLiteral => Expression::Literal(Literal::Double(<>)),
-    IntLiteral => Expression::Literal(Literal::Int(<>)),
-    BoolLiteral => Expression::Literal(Literal::Bool(<>)),
-    CharLiteral => Expression::Literal(Literal::Char(<>)),
-    StringLiteral => Expression::StringLiteral(<>),
-    "(" ")" => Expression::Literal(Literal::Unit),
-    Identifier => Expression::Identifier(<>),
-    "(" <Expr> ")" => Expression::Paren(Box::new(<>)),
-    ArrayLiteral,
-};
-
-ArrayLiteral: Expression = {
-    "[" <Comma<Expr>> "]" => Expression::ArrayFullLiteral(<>),
-    "[" <expr:Expr> ";" <size:IntLiteral> "]" => Expression::ArrayDefaultLiteral(Box::new(expr), size),
 };
 
 UnOp: UnOpCode = {

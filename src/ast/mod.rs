@@ -92,8 +92,8 @@ pub enum Literal {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructLiteral {
-    name: String,
-    fields: Vec<Spanned<(String, Spanned<Expression>)>,
+    pub name: String,
+    pub fields: Vec<Spanned<(String, Spanned<Expression>)>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

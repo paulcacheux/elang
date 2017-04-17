@@ -295,6 +295,18 @@ impl ASTPrinter {
                 self.print_expression(def);
                 self.0 -= 1;
             }
+            StructLiteral(ref struct_lit) => {
+                println!("StructLiteral '{}'", struct_lit.name);
+                self.0 += 1;
+                for field in &struct_lit.fields {
+                    self.print_span(&field.span);
+                    println!("field '{}'", field.inner.0);
+                    self.0 += 1;
+                    self.print_expression(&field.inner.1);
+                    self.0 -= 1;
+                }
+                self.0 -= 1;
+            }
         }
     }
 }
