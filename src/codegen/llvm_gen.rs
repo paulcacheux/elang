@@ -150,18 +150,17 @@ impl<'a> FunctionGenerator<'a> {
         match expr {
             ir::Expression::LocalVarLoad(id) => {
                 let ty = self.locals[&id].clone();
-                // TODO change to bitcast
                 write!(self.writer,
-                       "getelementptr {0}, {0}* %local_{1}, i64 0",
+                       "bitcast {0}* %local_{1} to {0}*",
                        type_to_string(ty),
                        id.0)
             }
             ir::Expression::GlobalLoad(name) => {
-                let ty = self.globals.get(&name).unwrap().clone();
+                let ty = self.globals[&name].clone();
                 write!(self.writer,
-                         "bitcast {0}* @{1} to {0}*",
-                         type_to_string(ty),
-                         name)
+                       "bitcast {0}* @{1} to {0}*",
+                       type_to_string(ty),
+                       name)
             }
             ir::Expression::LValueLoad(val) => {
                 if let ir::Type::LValue(ty) = val.ty {
@@ -290,7 +289,7 @@ impl<'a> FunctionGenerator<'a> {
 
                 let func_ty = match func.ty {
                     ir::Type::Ptr(sub_ty) => *sub_ty,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 write!(self.writer,
