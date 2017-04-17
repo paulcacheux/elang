@@ -78,6 +78,7 @@ pub enum Expression {
     StringLiteral(String),
     ArrayFullLiteral(Vec<Spanned<Expression>>),
     ArrayDefaultLiteral(Box<Spanned<Expression>>, i64),
+    StructLiteral(StructLiteral),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -87,6 +88,12 @@ pub enum Literal {
     Bool(bool),
     Char(String),
     Unit,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteral {
+    name: String,
+    fields: Vec<Spanned<(String, Spanned<Expression>)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
