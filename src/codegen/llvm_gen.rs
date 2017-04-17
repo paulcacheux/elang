@@ -17,18 +17,18 @@ pub fn gen_translation_unit<F: Write>(f: &mut F, tu: ir::TranslationUnit) -> io:
     Ok(())
 }
 
-fn register_declaration(decl: &ir::Declaration, globals: &mut HashMap<String, ir::FunctionType>) {
+fn register_declaration(decl: &ir::Declaration, globals: &mut HashMap<String, ir::Type>) {
     match *decl {
         ir::Declaration::ExternFunction { ref name, ref ty } |
         ir::Declaration::Function { ref name, ref ty, .. } => {
-            globals.insert(name.clone(), ty.clone());
+            globals.insert(name.clone(), ir::Type::Function(ty.clone()));
         }
     }
 }
 
 fn gen_declaration<F: Write>(f: &mut F,
                              declaration: ir::Declaration,
-                             globals: &mut HashMap<String, ir::FunctionType>)
+                             globals: &mut HashMap<String, ir::Type>)
                              -> io::Result<()> {
     match declaration {
         ir::Declaration::ExternFunction { name, ty } => {
@@ -60,7 +60,6 @@ fn gen_declaration<F: Write>(f: &mut F,
                 var_writer: Vec::new(),
                 writer: Vec::new(),
                 globals: globals,
-                global_used_id: 0,
                 locals: HashMap::new(),
             };
             for local in locals {
@@ -85,8 +84,7 @@ fn gen_declaration<F: Write>(f: &mut F,
 struct FunctionGenerator<'a> {
     var_writer: Vec<u8>,
     writer: Vec<u8>,
-    globals: &'a mut HashMap<String, ir::FunctionType>,
-    global_used_id: usize,
+    globals: &'a mut HashMap<String, ir::Type>,
     locals: HashMap<ir::LocalVarId, ir::Type>,
 }
 
@@ -114,24 +112,6 @@ impl<'a> FunctionGenerator<'a> {
         }
 
         Ok(())
-    }
-
-    fn gen_global(&mut self, name: String) -> io::Result<String> {
-        let id = self.global_used_id;
-        self.global_used_id += 1;
-
-        let ty = ir::Type::Function(self.globals.get(&name).unwrap().clone());
-        writeln!(self.var_writer,
-                 "\t%local_global_{} = alloca {}*",
-                 id,
-                 type_to_string(ty.clone()))?;
-        writeln!(self.var_writer,
-                 "\tstore {0}* @{1}, {0}** %local_global_{2}",
-                 type_to_string(ty),
-                 name,
-                 id)?;
-
-        Ok(format!("%local_global_{}", id))
     }
 
     fn gen_basic_block(&mut self, bb: ir::BasicBlock) -> io::Result<()> {
@@ -170,6 +150,7 @@ impl<'a> FunctionGenerator<'a> {
         match expr {
             ir::Expression::LocalVarLoad(id) => {
                 let ty = self.locals[&id].clone();
+                // TODO change to bitcast
                 write!(self.writer,
                        "getelementptr {0}, {0}* %local_{1}, i64 0",
                        type_to_string(ty),
@@ -177,11 +158,10 @@ impl<'a> FunctionGenerator<'a> {
             }
             ir::Expression::GlobalLoad(name) => {
                 let ty = self.globals.get(&name).unwrap().clone();
-                let name = self.gen_global(name)?;
                 write!(self.writer,
-                       "load {0}*, {0}** {1}",
-                       type_to_string(ir::Type::Function(ty)),
-                       name)
+                         "bitcast {0}* @{1} to {0}*",
+                         type_to_string(ty),
+                         name)
             }
             ir::Expression::LValueLoad(val) => {
                 if let ir::Type::LValue(ty) = val.ty {
@@ -307,9 +287,15 @@ impl<'a> FunctionGenerator<'a> {
                 }
             }
             ir::Expression::FuncCall(func, params) => {
+
+                let func_ty = match func.ty {
+                    ir::Type::Ptr(sub_ty) => *sub_ty,
+                    _ => unreachable!()
+                };
+
                 write!(self.writer,
                        "call {} %temp_{}({})",
-                       type_to_string(func.ty),
+                       type_to_string(func_ty),
                        func.id,
                        params
                            .into_iter()
@@ -383,6 +369,6 @@ fn type_to_string(ty: ir::Type) -> String {
                         .join(", "),
                     if func.variadic { ", ..." } else { "" })
         }
-        ir::Type::Struct(_) => unimplemented!()
+        ir::Type::Struct(_) => unimplemented!(),
     }
 }

@@ -15,6 +15,16 @@ pub enum Type {
     Struct(StructType),
 }
 
+impl Type {
+    pub fn decay_type(&self) -> Option<Type> {
+        match *self {
+            Type::Unit | Type::Bool | Type::Int | Type::Double | Type::Char | Type::LValue(_) |
+            Type::Ptr(_) => None,
+            ref other => Some(Type::LValue(Box::new(other.clone()))),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionType {
     pub return_ty: Box<Type>,
@@ -46,7 +56,7 @@ impl fmt::Display for Type {
 impl fmt::Display for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,
-               "({}{}) -> {}",
+               "({}{})->{}",
                self.params_ty.iter().join(", "),
                if self.variadic { ", .." } else { "" },
                *self.return_ty)

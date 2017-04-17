@@ -32,7 +32,7 @@ fn print_declaration(decl: &Declaration) {
 }
 
 fn print_local_var(var: &LocalVar) {
-    print!("\tlet ${}: {}", var.id.0, var.ty);
+    print!("\tlet ${}: {} (size: {})", var.id.0, var.ty, var.size);
     if let Some(index) = var.param_index {
         println!(" = arg{};", index);
     } else {
@@ -97,7 +97,7 @@ fn print_expr(expr: &Expression) {
         Expression::FuncCall(ref func, ref params) => {
             print!("call ");
             print_value(func);
-            print!("(");
+            print!(" (");
             for param in params {
                 print_value(param);
                 print!(", ");

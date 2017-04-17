@@ -29,7 +29,8 @@ impl GlobalTable {
 
     pub fn get_var(&self, name: &String) -> Option<(ir::Type, ir::Expression)> {
         if let Some(ty) = self.globals.get(name) {
-            Some((ty.clone(), ir::Expression::GlobalLoad(name.clone())))
+            let ptr_ty = ir::Type::Ptr(Box::new(ty.clone()));
+            Some((ptr_ty, ir::Expression::GlobalLoad(name.clone())))
         } else {
             None
         }

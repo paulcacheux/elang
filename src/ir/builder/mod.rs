@@ -698,9 +698,21 @@ fn build_expression(fb: &mut FunctionBuilder,
         }
         ast::Expression::FuncCall(func, args) => {
             let func_value = build_expression(fb, *func)?;
-            let func_value = build_lvalue_to_rvalue(fb, func_value);
+            let func_value = build_ptrdecay(fb, func_value);
 
-            if let ir::Type::Function(func_ty) = func_value.ty.clone() {
+            fn func_ptr(ty: ir::Type) -> Option<ir::FunctionType> {
+                if let ir::Type::Ptr(ty) = ty {
+                    if let ir::Type::Function(ty) = *ty {
+                        Some(ty)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+
+            if let Some(func_ty) = func_ptr(func_value.ty.clone()) {
                 let mut args_span = Vec::with_capacity(args.len());
                 let mut args_ty = Vec::with_capacity(args.len());
                 let mut args_values = Vec::with_capacity(args.len());
@@ -1019,6 +1031,23 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
     }
 }
 
+fn build_ptrdecay(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Value {
+    if let Some(decay_ty) = value.ty.decay_type() {
+        let ptr_ty = ir::Type::Ptr(Box::new(value.ty.clone()));
+        let local_id = fb.register_local_unnamed(value.ty);
+        let decay_lvalue = fb.new_temp_value(decay_ty);
+        fb.push_statement(ir::Statement::Assign(decay_lvalue.clone(),
+                                                ir::Expression::LocalVarLoad(local_id)));
+        let ptr_value = fb.new_temp_value(ptr_ty.clone());
+        fb.push_statement(ir::Statement::Assign(ptr_value.clone(),
+                                                ir::Expression::UnOp(ir::UnOpCode::AddressOf,
+                                                                     decay_lvalue)));
+        ptr_value
+    } else {
+        value
+    }
+}
+
 fn build_type(parse_ty: Spanned<ast::ParseType>,
               globals_table: &GlobalTable)
               -> Result<ir::Type, SemanticError> {
@@ -1031,9 +1060,7 @@ fn build_type(parse_ty: Spanned<ast::ParseType>,
                 .get_type(&lit)
                 .ok_or_else(|| {
                                 SemanticError {
-                                    kind: SemanticErrorKind::UndefinedType {
-                                        name: lit,
-                                    },
+                                    kind: SemanticErrorKind::UndefinedType { name: lit },
                                     span: span,
                                 }
                             })

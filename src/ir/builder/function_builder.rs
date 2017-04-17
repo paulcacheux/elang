@@ -215,4 +215,17 @@ impl<'a> FunctionBuilder<'a> {
         self.local_counter += 1;
         id
     }
+
+    pub fn register_local_unnamed(&mut self, ty: ir::Type) -> ir::LocalVarId {
+        let id = ir::LocalVarId(self.local_counter);
+        self.locals
+            .push(ir::LocalVar {
+                      id: id,
+                      ty: ty,
+                      size: 1,
+                      param_index: None,
+                  });
+        self.local_counter += 1;
+        id
+    }
 }
