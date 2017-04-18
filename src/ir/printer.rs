@@ -104,6 +104,11 @@ fn print_expr(expr: &Expression) {
             }
             print!(")")
         }
+        Expression::FieldAccess(ref val, index) => {
+            print!("fieldaccess ");
+            print_value(val);
+            print!(" at index {}", index);
+        }
         Expression::Literal(ref lit) => {
             match *lit {
                 Literal::Int(val) => print!("IntLit '{}'", val),

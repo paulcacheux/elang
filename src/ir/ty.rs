@@ -37,6 +37,17 @@ pub struct StructType {
     pub fields_ty: Vec<(String, Type)>,
 }
 
+impl StructType {
+    pub fn get_field(&self, field_name: &str) -> Option<(usize, Type)> {
+        for (index, field) in self.fields_ty.iter().enumerate() {
+            if field.0 == field_name {
+                return Some((index, field.1.clone()))
+            }
+        }
+        None
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

@@ -301,6 +301,7 @@ impl<'a> FunctionGenerator<'a> {
                            .map(|val| format!("{} %temp_{}", type_to_string(val.ty), val.id))
                            .join(", "))
             }
+            ir::Expression::FieldAccess(_, _) => unimplemented!(),
             ir::Expression::Literal(lit) => {
                 match lit {
                     ir::Literal::Int(val) => {

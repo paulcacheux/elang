@@ -60,6 +60,7 @@ pub enum Expression {
     UnOp(UnOpCode, Value),
     CastOp(CastCode, Value),
     FuncCall(Value, Vec<Value>),
+    FieldAccess(Value, usize),
     Literal(Literal),
 }
 

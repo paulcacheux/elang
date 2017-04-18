@@ -782,7 +782,12 @@ fn build_expression(fb: &mut FunctionBuilder,
                     })
             }
         }
-        ast::Expression::FieldAccess(_, _) => unimplemented!(),
+        ast::Expression::FieldAccess(expr, field_name) => {
+            let struct_value = build_expression(fb, *expr)?;
+            let struct_value = build_ptrdecay(fb, struct_value);
+
+            build_struct_field_access(fb, struct_value, field_name.inner)
+        }
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
             if let Some((ty, expr)) = fb.symbol_table.get_var(&id) {
@@ -926,7 +931,79 @@ fn build_expression(fb: &mut FunctionBuilder,
 
             Ok(array_value)
         }
-        ast::Expression::StructLiteral(_) => unimplemented!()
+        ast::Expression::StructLiteral(ast::StructLiteral { name, fields }) => {
+            if let Some(ty) = fb.symbol_table.globals.get_type(&name) {
+                let struct_id = fb.register_local_unnamed(ty.clone());
+                let struct_lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(ty.clone())));
+                fb.push_statement(ir::Statement::Assign(struct_lvalue.clone(),
+                                                        ir::Expression::LocalVarLoad(struct_id)));
+
+                let struct_value = fb.new_temp_value(ir::Type::Ptr(Box::new(ty.clone())));
+                fb.push_statement(
+                    ir::Statement::Assign(
+                        struct_value.clone(),
+                        ir::Expression::UnOp(
+                            ir::UnOpCode::AddressOf,
+                            struct_lvalue.clone()
+                        )
+                    )
+                );
+
+                for field in fields {
+                    //TODO check init and non repeat
+                    let expr_value = build_expression(fb, field.inner.1)?;
+                    let expr_value = build_lvalue_to_rvalue(fb, expr_value);
+
+                    let field_lvalue =
+                        build_struct_field_access(fb, struct_value.clone(), field.inner.0)?;
+                    fb.push_statement(ir::Statement::LValueSet(field_lvalue, expr_value));
+                }
+
+                let struct_value = build_lvalue_to_rvalue(fb, struct_lvalue);
+                Ok(struct_value)
+            } else {
+                unimplemented!()
+                // no such struct
+            }
+        }
+    }
+}
+
+fn build_struct_field_access(fb: &mut FunctionBuilder,
+                             struct_value: ir::Value,
+                             field_name: String)
+                             -> Result<ir::Value, SemanticError> {
+    fn struct_ptr(ty: ir::Type) -> Option<ir::StructType> {
+        if let ir::Type::Ptr(ty) = ty {
+            if let ir::Type::Struct(ty) = *ty {
+                Some(ty)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    if let Some(struct_ty) = struct_ptr(struct_value.ty.clone()) {
+        if let Some((index, field_ty)) = struct_ty.get_field(&field_name) {
+            let ptr_ty = ir::Type::Ptr(Box::new(field_ty.clone()));
+            let ptr_value = fb.new_temp_value(ptr_ty);
+            fb.push_statement(ir::Statement::Assign(ptr_value.clone(),
+                                                    ir::Expression::FieldAccess(struct_value,
+                                                                                index)));
+
+            let lvalue = fb.new_temp_value(ir::Type::LValue(Box::new(field_ty)));
+            fb.push_statement(ir::Statement::Assign(lvalue.clone(),
+                                                    ir::Expression::UnOp(ir::UnOpCode::PtrDeref,
+                                                                         ptr_value)));
+
+            Ok(lvalue)
+        } else {
+            unimplemented!()
+        }
+    } else {
+        unimplemented!()
     }
 }
 
@@ -1033,7 +1110,15 @@ fn build_lvalue_to_rvalue(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Val
 }
 
 fn build_ptrdecay(fb: &mut FunctionBuilder, value: ir::Value) -> ir::Value {
-    if let Some(decay_ty) = value.ty.decay_type() {
+    if let ir::Type::LValue(sub_ty) = value.ty.clone() {
+        let ptr_ty = ir::Type::Ptr(sub_ty);
+        let ptr_value = fb.new_temp_value(ptr_ty.clone());
+
+        fb.push_statement(ir::Statement::Assign(ptr_value.clone(),
+                                                ir::Expression::UnOp(ir::UnOpCode::AddressOf,
+                                                                     value)));
+        ptr_value
+    } else if let Some(decay_ty) = value.ty.decay_type() {
         let ptr_ty = ir::Type::Ptr(Box::new(value.ty.clone()));
         let local_id = fb.register_local_unnamed(value.ty);
         let decay_lvalue = fb.new_temp_value(decay_ty);
