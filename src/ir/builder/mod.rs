@@ -782,11 +782,11 @@ fn build_expression(fb: &mut FunctionBuilder,
                     })
             }
         }
-        ast::Expression::FieldAccess(expr, field_name) => {
-            let struct_value = build_expression(fb, *expr)?;
+        ast::Expression::FieldAccess(struct_expr, field_name) => {
+            let struct_value = build_expression(fb, *struct_expr)?;
             let struct_value = build_ptrdecay(fb, struct_value);
 
-            build_struct_field_access(fb, struct_value, field_name.inner)
+            build_struct_field_access(fb, struct_value, field_name.inner, expr.span)
         }
         ast::Expression::Paren(expr) => build_expression(fb, *expr),
         ast::Expression::Identifier(id) => {
@@ -954,16 +954,20 @@ fn build_expression(fb: &mut FunctionBuilder,
                     let expr_value = build_expression(fb, field.inner.1)?;
                     let expr_value = build_lvalue_to_rvalue(fb, expr_value);
 
-                    let field_lvalue =
-                        build_struct_field_access(fb, struct_value.clone(), field.inner.0)?;
+                    let field_lvalue = build_struct_field_access(fb,
+                                                                 struct_value.clone(),
+                                                                 field.inner.0,
+                                                                 field.span)?;
                     fb.push_statement(ir::Statement::LValueSet(field_lvalue, expr_value));
                 }
 
                 let struct_value = build_lvalue_to_rvalue(fb, struct_lvalue);
                 Ok(struct_value)
             } else {
-                unimplemented!()
-                // no such struct
+                Err(SemanticError {
+                        kind: SemanticErrorKind::UndefinedType { name: name },
+                        span: expr.span,
+                    })
             }
         }
     }
@@ -971,7 +975,8 @@ fn build_expression(fb: &mut FunctionBuilder,
 
 fn build_struct_field_access(fb: &mut FunctionBuilder,
                              struct_value: ir::Value,
-                             field_name: String)
+                             field_name: String,
+                             span: Span)
                              -> Result<ir::Value, SemanticError> {
     fn struct_ptr(ty: ir::Type) -> Option<ir::StructType> {
         if let ir::Type::Ptr(ty) = ty {
@@ -1000,10 +1005,19 @@ fn build_struct_field_access(fb: &mut FunctionBuilder,
 
             Ok(lvalue)
         } else {
-            unimplemented!()
+            Err(SemanticError {
+                    kind: SemanticErrorKind::NoFieldInStruct {
+                        struct_ty: struct_value.ty,
+                        field: field_name,
+                    },
+                    span: span,
+                })
         }
     } else {
-        unimplemented!()
+        Err(SemanticError {
+                kind: SemanticErrorKind::NotAStructType { ty: struct_value.ty },
+                span: span,
+            })
     }
 }
 

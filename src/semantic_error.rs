@@ -34,6 +34,8 @@ pub enum SemanticErrorKind {
     NonCallableType { found: Type },
     MismatchingParamLen { expected: usize, found: usize },
     CastUndefined { expr_ty: Type, target_ty: Type },
+    NoFieldInStruct { struct_ty: Type, field: String },
+    NotAStructType { ty: Type },
     IdentifierUndefined { name: String },
     InvalidEscapeChar { c: char },
     MultipleCharLiteral,
@@ -48,7 +50,9 @@ impl fmt::Display for SemanticErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::SemanticErrorKind::*;
         match *self {
-            FunctionAlreadyDefined { ref name } => write!(f, "'{}' function is already defined.", name),
+            FunctionAlreadyDefined { ref name } => {
+                write!(f, "'{}' function is already defined.", name)
+            }
             ParameterAlreadyDefined { ref name } => {
                 write!(f, "'{}' parameter is already defined.", name)
             }
@@ -61,7 +65,10 @@ impl fmt::Display for SemanticErrorKind {
             TypeAlreadyDefined { ref name } => {
                 write!(f, "'{}' is already defined as a type.", name)
             }
-            MismatchingTypesAssignment { ref expected, ref found } => {
+            MismatchingTypesAssignment {
+                ref expected,
+                ref found,
+            } => {
                 write!(f,
                        "Mismatching types during assigment. Expected '{}', found '{}'.",
                        expected,
@@ -73,26 +80,39 @@ impl fmt::Display for SemanticErrorKind {
                        Type::Bool,
                        found)
             }
-            MismatchingTypesReturn { ref expected, ref found } => {
+            MismatchingTypesReturn {
+                ref expected,
+                ref found,
+            } => {
                 write!(f,
                        "Mismatching types in return statement. Expected '{}', found '{}'.",
                        expected,
                        found)
             }
-            MismatchingTypesArgument { ref expected, ref found } => {
+            MismatchingTypesArgument {
+                ref expected,
+                ref found,
+            } => {
                 write!(f,
                        "Mismatching types in argument. Expected '{}', found '{}'.",
                        expected,
                        found)
             }
-            MismatchingTypesArrayLiteral { ref expected, ref found } => {
+            MismatchingTypesArrayLiteral {
+                ref expected,
+                ref found,
+            } => {
                 write!(f,
                        "Mismatching types in array literal. Expected '{}', found '{}'.",
                        expected,
                        found)
             }
             UndefinedType { ref name } => write!(f, "'{}' is not defined as a type.", name),
-            BinaryOperationUndefined { op, ref lhs_ty, ref rhs_ty } => {
+            BinaryOperationUndefined {
+                op,
+                ref lhs_ty,
+                ref rhs_ty,
+            } => {
                 write!(f,
                        "'{}' is not defined between '{}' and '{}'.",
                        op,
@@ -109,7 +129,9 @@ impl fmt::Display for SemanticErrorKind {
                        found)
             }
             NonAssignableExpression => write!(f, "This expression is not assignable."),
-            NonSubscriptableType { ref found } => write!(f, "'{}' type is not subscriptable.", found),
+            NonSubscriptableType { ref found } => {
+                write!(f, "'{}' type is not subscriptable.", found)
+            }
             NonCallableType { ref found } => write!(f, "'{}' type is not callable", found),
             MismatchingParamLen { expected, found } => {
                 write!(f,
@@ -117,12 +139,20 @@ impl fmt::Display for SemanticErrorKind {
                        expected,
                        found)
             }
-            CastUndefined { ref expr_ty, ref target_ty } => {
+            CastUndefined {
+                ref expr_ty,
+                ref target_ty,
+            } => {
                 write!(f,
                        "The cast between '{}' and '{}' is undefined.",
                        expr_ty,
                        target_ty)
             }
+            NoFieldInStruct {
+                ref struct_ty,
+                ref field,
+            } => write!(f, "There is no '{}' field in '{}'.", field, struct_ty),
+            NotAStructType { ref ty } => write!(f, "'{}' is not a struct type.", ty),
             IdentifierUndefined { ref name } => write!(f, "'{}' is not defined here.", name),
             InvalidEscapeChar { c } => write!(f, "'{}' is not a valide escape character.", c),
             MultipleCharLiteral => write!(f, "Multiple characters in a character literal."),
