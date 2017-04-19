@@ -1,3 +1,5 @@
+import io;
+
 struct Example {
     a: int,
     b: double,
@@ -5,5 +7,7 @@ struct Example {
 
 fn main() -> int {
     let a = Example { a: 12, b: 5.4 };
-    return a.a;
+    println_double(a.a as double + a.b);
+
+    return 0;
 }

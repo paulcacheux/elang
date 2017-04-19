@@ -286,7 +286,6 @@ impl<'a> FunctionGenerator<'a> {
                 }
             }
             ir::Expression::FuncCall(func, params) => {
-
                 let func_ty = match func.ty {
                     ir::Type::Ptr(sub_ty) => *sub_ty,
                     _ => unreachable!(),
@@ -301,7 +300,18 @@ impl<'a> FunctionGenerator<'a> {
                            .map(|val| format!("{} %temp_{}", type_to_string(val.ty), val.id))
                            .join(", "))
             }
-            ir::Expression::FieldAccess(_, _) => unimplemented!(),
+            ir::Expression::FieldAccess(st, index) => {
+                let struct_ty = match st.ty {
+                    ir::Type::Ptr(sub_ty) => *sub_ty,
+                    _ => unreachable!(),
+                };
+
+                write!(self.writer,
+                       "getelementptr {0}, {0}* %temp_{1}, i32 0, i32 {2}",
+                       type_to_string(struct_ty),
+                       st.id,
+                       index)
+            }
             ir::Expression::Literal(lit) => {
                 match lit {
                     ir::Literal::Int(val) => {
@@ -369,6 +379,12 @@ fn type_to_string(ty: ir::Type) -> String {
                         .join(", "),
                     if func.variadic { ", ..." } else { "" })
         }
-        ir::Type::Struct(_) => unimplemented!(),
+        ir::Type::Struct(st) => {
+            format!("{{ {} }}",
+                    st.fields_ty
+                        .into_iter()
+                        .map(|field| type_to_string(field.1))
+                        .join(", "))
+        }
     }
 }
