@@ -1,26 +1,11 @@
 extern crate clap;
-extern crate itertools;
-extern crate unicode_xid;
-extern crate lalrpop_util;
-extern crate tempdir;
-extern crate rayon;
+extern crate elang;
 
 use clap::{Arg, App};
 use std::path::PathBuf;
 
-mod pipeline;
-mod span;
-mod lexer;
-mod comment_remover;
-mod parser;
-mod ast;
-mod ir;
-mod semantic_error;
-mod codegen;
-mod diagnostics;
-mod outer;
-
-use pipeline::{CompileOptions, OutputType};
+use elang::{pipeline, outer};
+use elang::pipeline::{CompileOptions, OutputType};
 
 fn main() {
     let matches = App::new("Elang Compiler")
