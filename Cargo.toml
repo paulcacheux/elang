@@ -13,13 +13,13 @@ name = "elang_driver"
 path = "src/driver.rs"
 
 [build-dependencies]
-lalrpop = "0.12.5"
+lalrpop = "0.12"
 
 [dependencies]
-lalrpop-util = "0.12.5"
+lalrpop-util = "0.12"
 regex = "0.2"
-clap = "2.22.0"
-itertools = "0.5.9"
+clap = "2.22"
+itertools = "0.5"
 unicode-xid = "0.0.4"
-tempdir = "0.3.5"
-rayon = "0.7.0"
+tempdir = "0.3"
+rayon = "0.7"
