@@ -1,0 +1,19 @@
+//6
+//8
+//67
+//152
+//16
+//827
+//7
+
+import io;
+
+fn main() {
+    println_int(2 * (2 + 1));
+    println_int(((((((2 + 3 * 2)))))));
+    println_int(2 * (3 + 5 * (2 + 5 - 1)) + (10 - 3 * (2 + 1)));
+    println_int(1 * (2 + 2 * (3 + 3 * (4 + 4 * (5)))));
+    println_int((4) * (2 + 2));
+    println_int((827));
+    println_int(2 * (4 + 5) / 10 * 7);
+}

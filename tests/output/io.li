@@ -1,0 +1,26 @@
+extern fn printf(*char, ..) -> int;
+extern fn putchar(int) -> int;
+
+fn print_int(value: int) {
+    printf("%d", value);
+}
+
+fn println_int(value: int) {
+    printf("%d\n", value);
+}
+
+fn print_double(value: double) {
+    printf("%f", value);
+}
+
+fn println_double(value: double) {
+    printf("%f\n", value);
+}
+
+fn print_char(c: char) {
+    putchar(c as int);
+}
+
+fn print_string(str: *char) {
+    printf(str);
+}

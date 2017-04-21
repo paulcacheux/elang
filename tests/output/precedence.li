@@ -1,0 +1,19 @@
+//3
+//3
+//12
+//6
+//6
+//1
+//13
+
+import io;
+
+fn main() {
+    println_int(2 * 1 + 1);
+    println_int(1 + 1 * 2);
+    println_int(3 + 3 * 3);
+    println_int(10 - 2 * 2);
+    println_int(10 / 2 + 1);
+    println_int(10 % 2 * 4 + 1);
+    println_int(13 / 2 + 2 * 3 + 11 % 2);
+}

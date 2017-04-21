@@ -1,0 +1,15 @@
+//4
+//16
+//64
+
+import io;
+
+fn square(x: int) -> int {
+    return x*x;
+}
+
+fn main() {
+    println_int(square(2));
+    println_int(square(4));
+    println_int(square(8));
+}

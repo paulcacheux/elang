@@ -1,0 +1,42 @@
+//23
+//19
+//17
+//13
+//11
+//7
+//5
+//3
+//2
+//1
+
+import io;
+
+fn main() {
+    let primeCalc = 23;
+
+    while primeCalc > 0 {
+        let primeTest = primeCalc - 1;
+        let modMulti = 1;
+
+        while primeTest - 1 > 0 {
+            let thisDiv = primeCalc % primeTest;
+            modMulti *= thisDiv;
+
+            if modMulti > 0 {
+                modMulti = 1;
+            } else {
+                break;
+            }
+
+            primeTest -= 1;
+        }
+
+        // This must be a prime number
+        if modMulti > 0 {
+            println_int(primeCalc);
+        }
+
+
+        primeCalc -= 1;
+    }
+}
