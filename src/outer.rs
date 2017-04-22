@@ -38,10 +38,10 @@ pub fn main_outer(tu: ir::TranslationUnit,
                   input_path: &str,
                   options: &CompileOptions)
                   -> io::Result<()> {
+    let tmp_dir = TempDir::new("elang-compiler")?;
     match options.output_type {
         OutputType::Check => Ok(()),
         OutputType::LLVM => {
-            let tmp_dir = TempDir::new("elang-compiler")?;
             let llvm_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
 
             let mut reader = std::fs::File::open(llvm_path)?;
@@ -49,7 +49,6 @@ pub fn main_outer(tu: ir::TranslationUnit,
             redirect_stream(&mut reader, &mut writer)
         }
         OutputType::Run => {
-            let tmp_dir = TempDir::new("elang-compiler")?;
             let exec_path = output_exec(tu, input_path, tmp_dir.path(), options)?;
             if !run_command(exec_path, &[])?.success() {
                 panic!("exec fail");
@@ -57,7 +56,6 @@ pub fn main_outer(tu: ir::TranslationUnit,
             Ok(())
         }
         OutputType::Exec => {
-            let tmp_dir = TempDir::new("elang-compiler")?;
             let exec_path = output_exec(tu, input_path, tmp_dir.path(), options)?;
             let default_path = PathBuf::from("a.out");
             std::fs::copy(exec_path,
