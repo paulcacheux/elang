@@ -1,3 +1,5 @@
+use std;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use lexer::{LexicalError, Token};
@@ -81,13 +83,17 @@ impl<'a> ToError<'a> for SemanticError {
     }
 }
 
+macro_rules! eprintln {
+    ($fmt:expr, $($arg:tt)*) => (writeln!(std::io::stderr(), $fmt, $($arg)*).unwrap())
+}
+
 pub fn print_diagnostic<'a, E: ToError<'a>, P: AsRef<Path>>(input: &'a str, input_path: P, error: E) {
     let error = error.convert(input, input_path.as_ref().to_path_buf());
-    println!("Error in: {}", error.file_path.display());
-    println!("{}", error.msg);
+    eprintln!("Error in: {}", error.file_path.display());
+    eprintln!("{}", error.msg);
     for line in error.lines {
-        println!("{:<5}: {}", line.n + 1, line.text);
-        println!("       {}", line.arrow);
+        eprintln!("{:<5}: {}", line.n + 1, line.text);
+        eprintln!("       {}", line.arrow);
     }
 }
 
