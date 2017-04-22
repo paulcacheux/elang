@@ -17,6 +17,23 @@ fn get_writer(output_path: &Option<PathBuf>) -> io::Result<Box<std::io::Write>> 
     }
 }
 
+fn redirect_stream<R, W>(reader: &mut R, writer: &mut W) -> io::Result<()>
+    where R: io::Read,
+          W: io::Write
+{
+    let mut buffer = vec![0; 64 * 1024];
+
+    loop {
+        let len_read = try!(reader.read(&mut buffer));
+
+        if len_read == 0 {
+            return Ok(());
+        }
+
+        try!(writer.write_all(&buffer[..len_read]));
+    }
+}
+
 pub fn main_outer(tu: ir::TranslationUnit,
                   input_path: &str,
                   options: &CompileOptions)
@@ -24,8 +41,12 @@ pub fn main_outer(tu: ir::TranslationUnit,
     match options.output_type {
         OutputType::Check => Ok(()),
         OutputType::LLVM => {
+            let tmp_dir = TempDir::new("elang-compiler")?;
+            let llvm_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
+
+            let mut reader = std::fs::File::open(llvm_path)?;
             let mut writer = get_writer(&options.output_path)?;
-            codegen::llvm_gen::gen_translation_unit(&mut writer, tu)
+            redirect_stream(&mut reader, &mut writer)
         }
         OutputType::Run => {
             let tmp_dir = TempDir::new("elang-compiler")?;
@@ -39,7 +60,8 @@ pub fn main_outer(tu: ir::TranslationUnit,
             let tmp_dir = TempDir::new("elang-compiler")?;
             let exec_path = output_exec(tu, input_path, tmp_dir.path(), options)?;
             let default_path = PathBuf::from("a.out");
-            std::fs::copy(exec_path, options.output_path.as_ref().unwrap_or(&default_path))?;
+            std::fs::copy(exec_path,
+                          options.output_path.as_ref().unwrap_or(&default_path))?;
             Ok(())
         }
     }
@@ -57,20 +79,18 @@ fn executable_name(path: &str) -> String {
     name_parts.join(".")
 }
 
-fn output_exec(tu: ir::TranslationUnit,
+fn path_to_str(path: &PathBuf) -> &str {
+    path.to_str().unwrap()
+}
+
+fn output_llvm(tu: ir::TranslationUnit,
                input_path: &str,
                tmp_dir_path: &Path,
                options: &CompileOptions)
                -> io::Result<PathBuf> {
-    fn path_to_str(path: &PathBuf) -> &str {
-        path.to_str().unwrap()
-    }
-
     let exec_name = executable_name(input_path);
 
     let llvm_path = tmp_dir_path.join(format!("{}.ll", exec_name));
-    let obj_path = tmp_dir_path.join(format!("{}.o", exec_name));
-    let exec_path = tmp_dir_path.join(exec_name);
 
     let mut llvm_file = File::create(&llvm_path)?;
     codegen::llvm_gen::gen_translation_unit(&mut llvm_file, tu).expect("error llvm gen");
@@ -82,6 +102,19 @@ fn output_exec(tu: ir::TranslationUnit,
                 .success() {
         panic!("opt fail");
     }
+
+    Ok(llvm_path)
+}
+
+fn output_exec(tu: ir::TranslationUnit,
+               input_path: &str,
+               tmp_dir_path: &Path,
+               options: &CompileOptions)
+               -> io::Result<PathBuf> {
+    let exec_name = executable_name(input_path);
+    let llvm_path = output_llvm(tu, input_path, tmp_dir_path, options)?;
+    let obj_path = tmp_dir_path.join(format!("{}.o", exec_name));
+    let exec_path = tmp_dir_path.join(exec_name);
 
     if !run_command("llc",
                     &["-filetype=obj", path_to_str(&llvm_path), "-o", path_to_str(&obj_path)])
