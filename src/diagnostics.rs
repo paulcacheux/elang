@@ -1,6 +1,6 @@
 use std;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
@@ -8,24 +8,26 @@ use lalrpop_util::ParseError;
 use span::Span;
 use ir::builder::SemanticError;
 
-pub struct Error<'a> {
+#[derive(Debug)]
+pub struct Error {
     file_path: PathBuf,
     msg: String,
-    lines: Vec<Line<'a>>,
+    lines: Vec<Line>,
 }
 
-struct Line<'a> {
+#[derive(Debug)]
+struct Line {
     n: usize,
-    text: &'a str,
+    text: String,
     arrow: String,
 }
 
-pub trait ToError<'a> {
-    fn convert(self, input: &'a str, file_path: PathBuf) -> Error<'a>;
+pub trait ToError {
+    fn convert(self, input: &str, file_path: PathBuf) -> Error;
 }
 
-impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
-    fn convert(self, input: &'a str, file_path: PathBuf) -> Error<'a> {
+impl ToError for ParseError<usize, Token, LexicalError> {
+    fn convert(self, input: &str, file_path: PathBuf) -> Error {
         match self {
             ParseError::InvalidToken { location } => {
                 Error {
@@ -73,8 +75,8 @@ impl<'a> ToError<'a> for ParseError<usize, Token, LexicalError> {
     }
 }
 
-impl<'a> ToError<'a> for SemanticError {
-    fn convert(self, input: &'a str, file_path: PathBuf) -> Error<'a> {
+impl ToError for SemanticError {
+    fn convert(self, input: &str, file_path: PathBuf) -> Error {
         Error {
             file_path: file_path,
             msg: self.kind.to_string(),
@@ -87,8 +89,7 @@ macro_rules! eprintln {
     ($fmt:expr, $($arg:tt)*) => (writeln!(std::io::stderr(), $fmt, $($arg)*).unwrap())
 }
 
-pub fn print_diagnostic<'a, E: ToError<'a>, P: AsRef<Path>>(input: &'a str, input_path: P, error: E) {
-    let error = error.convert(input, input_path.as_ref().to_path_buf());
+pub fn print_diagnostic(error: Error) {
     eprintln!("Error in: {}", error.file_path.display());
     eprintln!("{}", error.msg);
     for line in error.lines {
@@ -110,6 +111,7 @@ fn get_lines(input: &str, span: Span) -> Vec<Line> {
 
     input
         .lines()
+        .map(String::from)
         .zip(arrow.lines().map(String::from))
         .enumerate()
         .filter(|&(_, (_, ref arrow))| arrow.contains('^'))

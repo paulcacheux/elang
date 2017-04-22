@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use elang::{pipeline, outer};
 use elang::pipeline::{CompileOptions, OutputType};
+use elang::diagnostics;
 
 fn main() {
     let matches = App::new("Elang Compiler")
@@ -46,12 +47,16 @@ fn main() {
         output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 
-    if let Ok(tu) = pipeline::process_main_path(input_path.clone(), &options) {
-        if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
-            println!("{}", err);
+    match pipeline::process_main_path(input_path.clone(), &options) {
+        Ok(tu) => {
+            if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
+                println!("{}", err);
+                std::process::exit(1);
+            }
+        },
+        Err(err) => {
+            diagnostics::print_diagnostic(err);
             std::process::exit(1);
         }
-    } else {
-        std::process::exit(1);
     }
 }

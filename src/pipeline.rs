@@ -7,6 +7,7 @@ use lexer;
 use parser;
 use ast;
 use diagnostics;
+use diagnostics::ToError;
 use ir;
 
 use ir::GlobalTable;
@@ -56,7 +57,7 @@ pub fn build_path(id: &str, options: &CompileOptions) -> PathBuf {
 
 pub fn process_main_path<P: AsRef<Path>>(input_path: P,
                                          options: &CompileOptions)
-                                         -> Result<ir::TranslationUnit, ()> {
+                                         -> Result<ir::TranslationUnit, diagnostics::Error> {
     let mut globals_table = GlobalTable::new();
     let mut tu = process_path(input_path, options, &mut globals_table)?;
 
@@ -74,15 +75,12 @@ pub fn process_main_path<P: AsRef<Path>>(input_path: P,
 pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     options: &CompileOptions,
                                     globals_table: &mut GlobalTable)
-                                    -> Result<ir::TranslationUnit, ()> {
+                                    -> Result<ir::TranslationUnit, diagnostics::Error> {
     let input = slurp_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let mut ast_tu = match parser::parse_TranslationUnit(lex) {
         Ok(ast_tu) => ast_tu,
-        Err(err) => {
-            diagnostics::print_diagnostic(&input, input_path, err);
-            return Err(())
-        }
+        Err(err) => return Err(err.convert(&input, input_path.as_ref().to_path_buf())),
     };
 
     if options.print_ast {
@@ -92,17 +90,14 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
     let declarations = process_imports(&mut ast_tu, options, globals_table)?;
     match ir::builder::build_translation_unit(ast_tu, declarations, globals_table) {
         Ok(tu) => Ok(tu),
-        Err(err) => {
-            diagnostics::print_diagnostic(&input, input_path, err);
-            Err(())
-        }
+        Err(err) => Err(err.convert(&input, input_path.as_ref().to_path_buf())),
     }
 }
 
 pub fn process_imports(tu: &mut ast::TranslationUnit,
                        options: &CompileOptions,
                        globals_table: &mut GlobalTable)
-                       -> Result<Vec<ir::Declaration>, ()> {
+                       -> Result<Vec<ir::Declaration>, diagnostics::Error> {
     let mut declarations = Vec::new();
 
     for import in tu.imports.drain(..) {
