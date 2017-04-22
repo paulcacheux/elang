@@ -42,7 +42,7 @@ pub struct CompileOptions {
     pub output_path: Option<PathBuf>,
 }
 
-fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
+fn slurp_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     let mut file = File::open(path)?;
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
@@ -76,7 +76,7 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     options: &CompileOptions,
                                     globals_table: &mut GlobalTable)
                                     -> ir::TranslationUnit {
-    let input = read_file(&input_path).expect("Can't read input file");
+    let input = slurp_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let mut ast_tu = match parser::parse_TranslationUnit(lex) {
         Ok(ast_tu) => ast_tu,
