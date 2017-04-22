@@ -27,7 +27,7 @@ impl OutputType {
             "llvm" => Some(OutputType::LLVM),
             "run" => Some(OutputType::Run),
             "exec" => Some(OutputType::Exec),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -78,7 +78,7 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     -> ir::TranslationUnit {
     let input = read_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
-    let ast_tu = match parser::parse_TranslationUnit(lex) {
+    let mut ast_tu = match parser::parse_TranslationUnit(lex) {
         Ok(ast_tu) => ast_tu,
         Err(err) => {
             diagnostics::print_diagnostic(&input, input_path, err);
@@ -90,11 +90,27 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
         ast::printer::print_ast(&ast_tu);
     }
 
-    match ir::builder::build_translation_unit(ast_tu, globals_table, options) {
+    let declarations = process_imports(&mut ast_tu, options, globals_table);
+    match ir::builder::build_translation_unit(ast_tu, declarations, globals_table) {
         Ok(tu) => tu,
         Err(err) => {
             diagnostics::print_diagnostic(&input, input_path, err);
             exit(1);
         }
     }
+}
+
+pub fn process_imports(tu: &mut ast::TranslationUnit,
+                       options: &CompileOptions,
+                       globals_table: &mut GlobalTable)
+                       -> Vec<ir::Declaration> {
+    let mut declarations = Vec::new();
+
+    for import in tu.imports.drain(..) {
+        let path = build_path(&import, options);
+        let imported_tu = process_path(path, options, globals_table);
+        declarations.extend(imported_tu.declarations);
+    }
+
+    declarations
 }

@@ -1,7 +1,6 @@
 use ir;
 use ast;
 use span::{Spanned, Span};
-use pipeline;
 
 use ir::GlobalTable;
 use semantic_error::{SemanticError, SemanticErrorKind};
@@ -13,17 +12,9 @@ use self::function_builder::FunctionBuilder;
 use rayon::prelude::*;
 
 pub fn build_translation_unit(tu: ast::TranslationUnit,
-                              globals_table: &mut GlobalTable,
-                              options: &pipeline::CompileOptions)
+                              mut declarations: Vec<ir::Declaration>,
+                              globals_table: &mut GlobalTable)
                               -> Result<ir::TranslationUnit, SemanticError> {
-    let mut declarations = Vec::new();
-
-    for import in tu.imports {
-        let path = pipeline::build_path(&import, options);
-        let imported_tu = pipeline::process_path(path, options, globals_table);
-        declarations.extend(imported_tu.declarations);
-    }
-
     let mut predeclarations = Vec::with_capacity(tu.declarations.len());
     for decl in tu.declarations {
         if let Some(predecl) = register_declaration(decl, globals_table)? {
