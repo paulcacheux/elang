@@ -29,7 +29,7 @@ pub fn main_outer(tu: ir::TranslationUnit,
         }
         OutputType::Run => {
             let tmp_dir = TempDir::new("elang-compiler")?;
-            let exec_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
+            let exec_path = output_exec(tu, input_path, tmp_dir.path(), options)?;
             if !run_command(exec_path, &[])?.success() {
                 panic!("exec fail");
             }
@@ -37,7 +37,7 @@ pub fn main_outer(tu: ir::TranslationUnit,
         }
         OutputType::Exec => {
             let tmp_dir = TempDir::new("elang-compiler")?;
-            let exec_path = output_llvm(tu, input_path, tmp_dir.path(), options)?;
+            let exec_path = output_exec(tu, input_path, tmp_dir.path(), options)?;
             let default_path = PathBuf::from("a.out");
             std::fs::copy(exec_path, options.output_path.as_ref().unwrap_or(&default_path))?;
             Ok(())
@@ -57,7 +57,7 @@ fn executable_name(path: &str) -> String {
     name_parts.join(".")
 }
 
-fn output_llvm(tu: ir::TranslationUnit,
+fn output_exec(tu: ir::TranslationUnit,
                input_path: &str,
                tmp_dir_path: &Path,
                options: &CompileOptions)
