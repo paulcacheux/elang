@@ -46,9 +46,12 @@ fn main() {
         output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 
-    let tu = pipeline::process_main_path(input_path.clone(), &options);
-    if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
-        println!("{}", err);
+    if let Ok(tu) = pipeline::process_main_path(input_path.clone(), &options) {
+        if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
+            println!("{}", err);
+            std::process::exit(1);
+        }
+    } else {
         std::process::exit(1);
     }
 }

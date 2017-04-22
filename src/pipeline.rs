@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io::Read;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::exit;
 
 use lexer;
 use parser;
@@ -57,9 +56,9 @@ pub fn build_path(id: &str, options: &CompileOptions) -> PathBuf {
 
 pub fn process_main_path<P: AsRef<Path>>(input_path: P,
                                          options: &CompileOptions)
-                                         -> ir::TranslationUnit {
+                                         -> Result<ir::TranslationUnit, ()> {
     let mut globals_table = GlobalTable::new();
-    let mut tu = process_path(input_path, options, &mut globals_table);
+    let mut tu = process_path(input_path, options, &mut globals_table)?;
 
     if options.opt {
         ir::opt::opt_translation_unit(&mut tu);
@@ -69,20 +68,20 @@ pub fn process_main_path<P: AsRef<Path>>(input_path: P,
         ir::printer::print_ir(&tu);
     }
 
-    tu
+    Ok(tu)
 }
 
 pub fn process_path<P: AsRef<Path>>(input_path: P,
                                     options: &CompileOptions,
                                     globals_table: &mut GlobalTable)
-                                    -> ir::TranslationUnit {
+                                    -> Result<ir::TranslationUnit, ()> {
     let input = slurp_file(&input_path).expect("Can't read input file");
     let lex = lexer::Lexer::new(&input);
     let mut ast_tu = match parser::parse_TranslationUnit(lex) {
         Ok(ast_tu) => ast_tu,
         Err(err) => {
             diagnostics::print_diagnostic(&input, input_path, err);
-            exit(1);
+            return Err(())
         }
     };
 
@@ -90,12 +89,12 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
         ast::printer::print_ast(&ast_tu);
     }
 
-    let declarations = process_imports(&mut ast_tu, options, globals_table);
+    let declarations = process_imports(&mut ast_tu, options, globals_table)?;
     match ir::builder::build_translation_unit(ast_tu, declarations, globals_table) {
-        Ok(tu) => tu,
+        Ok(tu) => Ok(tu),
         Err(err) => {
             diagnostics::print_diagnostic(&input, input_path, err);
-            exit(1);
+            Err(())
         }
     }
 }
@@ -103,14 +102,14 @@ pub fn process_path<P: AsRef<Path>>(input_path: P,
 pub fn process_imports(tu: &mut ast::TranslationUnit,
                        options: &CompileOptions,
                        globals_table: &mut GlobalTable)
-                       -> Vec<ir::Declaration> {
+                       -> Result<Vec<ir::Declaration>, ()> {
     let mut declarations = Vec::new();
 
     for import in tu.imports.drain(..) {
         let path = build_path(&import, options);
-        let imported_tu = process_path(path, options, globals_table);
+        let imported_tu = process_path(path, options, globals_table)?;
         declarations.extend(imported_tu.declarations);
     }
 
-    declarations
+    Ok(declarations)
 }

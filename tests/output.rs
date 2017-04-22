@@ -40,7 +40,7 @@ fn run(path: &str) -> String {
         output_path: Some(exec_path.to_path_buf())
     };
 
-    let tu = pipeline::process_main_path(path, &options);
+    let tu = pipeline::process_main_path(path, &options).expect("diag error");
     outer::main_outer(tu, path, &options).expect("outer error");
 
     let output = std::process::Command::new(exec_path).output().expect("io error");
