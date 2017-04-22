@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use ir;
 use ir::{GlobalTable, SymbolTable};
-use semantic_error::{SemanticError, SemanticErrorKind};
+use ir::builder::{SemanticError, SemanticErrorKind};
 use span::Span;
 
 #[derive(Debug, Clone)]

@@ -4,7 +4,7 @@ use lexer::{LexicalError, Token};
 use lalrpop_util::ParseError;
 
 use span::Span;
-use semantic_error::SemanticError;
+use ir::builder::SemanticError;
 
 pub struct Error<'a> {
     file_path: PathBuf,

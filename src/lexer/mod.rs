@@ -1,66 +1,12 @@
+mod comment_remover;
+mod token;
+
+use itertools::Itertools;
 use std::iter::Peekable;
 use std::str::FromStr;
 
-use comment_remover::CommentRemover;
-
-use itertools::Itertools;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    ImportKeyword,
-    StructKeyword,
-    ExternKeyword,
-    FnKeyword,
-    LetKeyword,
-    ForKeyword,
-    WhileKeyword,
-    LoopKeyword,
-    IfKeyword,
-    ElseKeyword,
-    ReturnKeyword,
-    BreakKeyword,
-    ContinueKeyword,
-    AsKeyword,
-    OpenParen,
-    CloseParen,
-    OpenSquare,
-    CloseSquare,
-    OpenBracket,
-    CloseBracket,
-    Arrow,
-    Comma,
-    Dot,
-    DotDot,
-    SemiColon,
-    Colon,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Modulo,
-    PlusEqual,
-    MinusEqual,
-    StarEqual,
-    SlashEqual,
-    ModuloEqual,
-    Bang,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    EqualEqual,
-    Equal,
-    BangEqual,
-    Amp,
-    AmpAmp,
-    PipePipe,
-    IntLit(i64),
-    DoubleLit(f64),
-    BoolLit(bool),
-    CharLit(String),
-    StringLit(String),
-    Identifier(String),
-}
+use self::comment_remover::CommentRemover;
+pub use self::token::Token;
 
 #[derive(Debug, Clone)]
 pub struct LexicalError {

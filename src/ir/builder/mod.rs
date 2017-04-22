@@ -1,15 +1,14 @@
+mod typecheck_defs;
+mod function_builder;
+mod semantic_error;
+
+use rayon::prelude::*;
 use ir;
 use ast;
 use span::{Spanned, Span};
-
 use ir::GlobalTable;
-use semantic_error::{SemanticError, SemanticErrorKind};
-
-mod typecheck_defs;
-mod function_builder;
 use self::function_builder::FunctionBuilder;
-
-use rayon::prelude::*;
+pub use self::semantic_error::{SemanticError, SemanticErrorKind};
 
 pub fn build_translation_unit(tu: ast::TranslationUnit,
                               mut declarations: Vec<ir::Declaration>,
