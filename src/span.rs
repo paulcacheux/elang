@@ -7,7 +7,11 @@ pub struct Spanned<T> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Span(pub usize, pub usize, pub usize);
+pub struct Span {
+    pub source_index: usize,
+    pub lo: usize,
+    pub hi: usize,
+}
 
 impl<T> Spanned<T> {
     pub fn new(inner: T, span: Span) -> Self {

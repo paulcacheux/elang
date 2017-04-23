@@ -26,6 +26,7 @@ fn run(path: &str) -> String {
     use elang::pipeline;
     use elang::outer;
     use elang::pipeline::{CompileOptions, OutputType};
+    use elang::source_manager::SourceManager;
 
     let pathbuf = PathBuf::from(path);
     let tmp_dir = TempDir::new("elang-test").expect("dir error");
@@ -40,7 +41,8 @@ fn run(path: &str) -> String {
         output_path: Some(exec_path.to_path_buf())
     };
 
-    let tu = pipeline::process_main_path(path, &options).expect("diag error");
+    let mut source_manager = SourceManager::new();
+    let tu = pipeline::process_main_path(path, &options, &mut source_manager).expect("diag error");
     outer::main_outer(tu, path, &options).expect("outer error");
 
     let output = std::process::Command::new(exec_path).output().expect("io error");

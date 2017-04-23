@@ -25,7 +25,7 @@ impl ASTPrinter {
     }
 
     fn print_span(&self, span: &Span) {
-        print!("({}:{}) ", span.0, span.1);
+        print!("({}:{}) ", span.lo, span.hi);
     }
 
     fn print_declaration(&mut self, decl: &Spanned<Declaration>) {

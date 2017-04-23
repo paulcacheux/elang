@@ -33,7 +33,11 @@ impl ToError for ParseError<usize, Token, LexicalError> {
                 Error {
                     source_index: source_index,
                     msg: "Invalid token.\n".to_string(),
-                    lines: get_lines(source_manager, Span(source_index, location, location + 1)),
+                    lines: get_lines(source_manager, Span {
+                        source_index: source_index,
+                        lo: location,
+                        hi: location + 1
+                    }),
                 }
             }
             ParseError::UnrecognizedToken { token, expected } => {
@@ -41,7 +45,11 @@ impl ToError for ParseError<usize, Token, LexicalError> {
                     Error {
                         source_index: source_index,
                         msg: format!("Unrecognized token: {:?}.\n", tok),
-                        lines: get_lines(source_manager, Span(source_index, start, end)),
+                        lines: get_lines(source_manager, Span {
+                            source_index: source_index,
+                            lo: start,
+                            hi: end
+                        }),
                     }
                 } else {
                     Error {
@@ -61,14 +69,22 @@ impl ToError for ParseError<usize, Token, LexicalError> {
                 Error {
                     source_index: source_index,
                     msg: format!("Extra token: {:?}.", tok),
-                    lines: get_lines(source_manager, Span(source_index, start, end)),
+                    lines: get_lines(source_manager, Span {
+                        source_index: source_index,
+                        lo: start,
+                        hi: end
+                    }),
                 }
             }
             ParseError::User { error: LexicalError { msg, pos } } => {
                 Error {
                     source_index: source_index,
                     msg: msg,
-                    lines: get_lines(source_manager, Span(source_index, pos, pos + 1)),
+                    lines: get_lines(source_manager, Span {
+                        source_index: source_index,
+                        lo: pos,
+                        hi: pos + 1
+                    }),
                 }
             }
         }
@@ -86,13 +102,13 @@ impl ToError for SemanticError {
 }
 
 fn get_lines(source_manager: &SourceManager, span: Span) -> Vec<Line> {
-    let input = source_manager.get_input(span.0);
+    let input = source_manager.get_input(span.source_index);
     let mut arrow = String::with_capacity(input.len());
 
     for (i, c) in input.chars().enumerate() {
         arrow.push(match c {
                        '\n' => '\n',
-                       _ if span.1 <= i && i < span.2 => '^',
+                       _ if span.lo <= i && i < span.hi=> '^',
                        _ => ' ',
                    });
     }
