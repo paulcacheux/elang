@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use elang::{pipeline, outer};
 use elang::pipeline::{CompileOptions, OutputType};
 use elang::diagnostics;
+use elang::source_manager::SourceManager;
 
 fn main() {
     let matches = App::new("Elang Compiler")
@@ -47,7 +48,8 @@ fn main() {
         output_path: matches.value_of("OUTPUT").map(PathBuf::from),
     };
 
-    match pipeline::process_main_path(input_path.clone(), &options) {
+    let mut source_manager = SourceManager::new();
+    match pipeline::process_main_path(input_path.clone(), &options, &mut source_manager) {
         Ok(tu) => {
             if let Err(err) = outer::main_outer(tu, input_path.to_str().unwrap(), &options) {
                 println!("{}", err);
@@ -55,7 +57,7 @@ fn main() {
             }
         },
         Err(err) => {
-            diagnostics::print_diagnostic(err);
+            diagnostics::print_diagnostic(&source_manager, err);
             std::process::exit(1);
         }
     }

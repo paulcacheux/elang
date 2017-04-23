@@ -13,3 +13,4 @@ pub mod ir;
 pub mod codegen;
 pub mod diagnostics;
 pub mod outer;
+pub mod source_manager;
